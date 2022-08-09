@@ -28,7 +28,7 @@ Setup:
 
 - how to run python files is described at the beginning
 
-- the server script will create an err_log.txt file for errors occurred at runtime
+- the server script will create an err_log.txt file for errors occurred during runtime
   and a conn_log.txt file for logging incoming connections.
 
 - usi.py is an optional security file. It creates integrities of the files err_log.txt, key.txt, token.txt and valid_token.txt.
