@@ -3,7 +3,7 @@
 from cryptography.fernet import Fernet
 import sys
 import random
-
+import os
 
 def token_gen():
         upperCase = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
@@ -33,26 +33,40 @@ def token_gen():
                 sys.exit("\r\n")
         return token
 
+def check_dir(dirPath):
+        if os.path.exists(str(dirPath)):
+                print(f'Directory {dirPath} exists.')
+                pass
+        else:
+                print(f'Directory {dirPath} not exists --> creating...')
+                os.makedirs(dirPath)
 
+key_path = os.getcwd() + '/key.txt'
+token_path = os.getcwd() + '/token.txt'
+ultron_path = '/etc/ultron-server/'
+check_dir(ultron_path)
 
-
-key = Fernet.generate_key()
-print('private key generated')
-with open('key.txt', 'wb') as file:
-    file.write(key)
-file.close()
-print('private key written to key.txt')
-token = token_gen()
-print('user token generated')
-str1 = token + '\r\n'
-str1 = str1.encode()
-token = token.encode()
-with open('valid_token.txt', 'ab') as file:
-    file.write(str1)
-file.close()
-print('user token written to valid_token.txt')
-with open('token.txt', 'wb') as file:
-    file.write(token)
-file.close()
-print('user token written to token.txt')
-
+if os.path.exists(key_path):
+        os.system(f'mv {key_path} {ultron_path}key.txt')
+else:
+        key = Fernet.generate_key()
+        print('private key generated')
+        with open(ultron_path + 'key.txt', 'wb') as file:
+                file.write(key)
+        file.close()
+print(f'private key written to {ultron_path}key.txt')
+if os.path.exists(token_path):
+        os.system(f'mv {token_path} {ultron_path}token.txt')
+else:
+        token = token_gen()
+        print('user token generated')
+        str1 = token + '\r\n'
+        str1 = str1.encode()
+        token = token.encode()
+        with open('token.txt', 'wb') as file:
+            file.write(token)
+        file.close()
+print(f'user-token written to {ultron_path}token.txt')
+print('setting up triggers')
+os.system('cp uc /usr/bin/uc')
+os.system('chmod +x /usr/bin/uc')
