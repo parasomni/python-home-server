@@ -11,11 +11,12 @@ In the following it is descriped how to setup the server.
 
 Setup:
 
-- at first we have to create three files called 'key.txt', 'token.txt' and
-  'valid_token.txt' by running the setup.py script.
+- at first we have to create two files called 'key.txt' and 'token.txt'
+  by running the setup.py script.
   the key file is very important because it includes the private key for the 
   encryption. token.txt stores the user token which is neccessary to authenticate 
-  to the server. valid_token.txt is a collection of valid tokens allowed to access the server.
+  to the server. Add the token to a file calles valid_token.txt. It is a collection 
+  of valid tokens allowed to access the server.
   All user tokens must be stored in valid_tokens.txt
 
 - next step is to setup the directories for the users. In line 263 of u-s-b.py 
@@ -23,10 +24,7 @@ Setup:
   define the user directories.
 
 - now the setup is allready done. Copy the files u-s-b.py, key.txt and valid_token.txt
-  in the same directory. The client script u-c-b.py needs key.txt and token.txt
   in the same directory. 
-
-- how to run python files is described at the beginning
 
 - the server script will create an err_log.txt file for errors occurred during runtime
   and a conn_log.txt file for logging incoming connections.
