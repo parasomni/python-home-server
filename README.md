@@ -11,20 +11,9 @@ In the following it is descriped how to setup the server.
 
 Setup:
 
-- at first we have to create two files called 'key.txt' and 'token.txt'
-  by running the setup.py script.
-  the key file is very important because it includes the private key for the 
-  encryption. token.txt stores the user token which is neccessary to authenticate 
-  to the server. Add the token to a file calles valid_token.txt. It is a collection 
-  of valid tokens allowed to access the server.
-  All user tokens must be stored in valid_tokens.txt
+- run the server-setup.py script. It will create the private key for encryption and generates the user token for authentication.
 
-- next step is to setup the directories for the users. In line 263 of u-s-b.py 
-  you will find an array with four empty values ["","","",""]. In it you can 
-  define the user directories.
-
-- now the setup is allready done. Copy the files u-s-b.py, key.txt and valid_token.txt
-  in the same directory. 
+- now you can run the server by executing the command *us*
 
 - the server script will create an err_log.txt file for errors occurred during runtime
   and a conn_log.txt file for logging incoming connections.
