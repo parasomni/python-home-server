@@ -11,9 +11,9 @@ In the following it is descriped how to setup the server.
 
 Setup:
 
-- run the server-setup.py script. It will create the private key for encryption and generates the user token for authentication.
+- run the server-setup.py and cleint-setup.py script. It will create the private key for encryption and generates the user token for authentication.
 
-- now you can run the server by executing the command *us*
+- now you can run the server by executing the command *us* and the client by executing the command *uc* 
 
 - the server script will create an err_log.txt file for errors occurred during runtime
   and a conn_log.txt file for logging incoming connections.
