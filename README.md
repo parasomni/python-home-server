@@ -1,6 +1,6 @@
 # python-home-server » a simple command line home server.
 
-This python-home-server called "ultron-server" is a simple command line server. It can be used by users who enjoy coding in python and have fun by adding new features to it. The server itself uses encryption to handle files between the client. Available options are described in the help section of uc.py. Ultron-server has the possibility to server as a package manager where the user can create packages which he needs on his devices. The packages will be downloaded and integrated in the system.  
+This python-home-server called "ultron-server" is a simple command line server. It can be used as an alternative to NAS or FTP servers. As its completely written in python, it can be easily improved and new features can be added by the user. The server itself handles files between the client and the server. All actions are symmetric encrypted with the primary key generated with the setup script. Available server options are described in the help section of uc.py. Ultron-server has the possibility to serve as a package manager to install important tools the user may needs on any device. The packages will be downloaded and integrated in the system.  
 
 # Setup:
 
