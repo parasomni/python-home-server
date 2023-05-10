@@ -32,11 +32,11 @@ To setup the client on a device you want to install it run the following code:
 
 `python3 client-setup.py`
 
-   You can now run the command `us -h` to see all available options. By running the script for the first time the programm will guide you through the server configuration.
+   You can now run the command `uc -h` to see all available options. By running the script for the first time the programm will guide you through the server configuration.
 
    Run the following command to check if the authentification token is valid: 
    
-`us --auth /etc/ultron-server/token.txt`
+`uc --auth /etc/ultron-server/token.txt`
 
 ## 4. Additional security feature
 
