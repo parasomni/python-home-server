@@ -4,7 +4,7 @@ This python-home-server called "ultron-server" is a simple command line server. 
 
 # Setup:
 
-## 1. Download necessary files
+## 1. Download the necessary files
 
 At first fetch the files from the python-home-server repository:
 
@@ -13,24 +13,24 @@ At first fetch the files from the python-home-server repository:
 
 ## 2. Server setup
 
- To setup the server on the device you want to install it run the following code:
+ To setup the server on a device run the following code:
 
-`python3 server-setup.py` 
+`sudo python3 server-setup.py` 
 
   This script generates the private key for the encryption and a user token for authentification. The generated user token is added to the *valid-tokens.txt* file where all valid users are stored in.
 
-  NOTE: The encryption key and user token have to be copied in the same directory where the client-setup.py script is located! Otherwise the script will generate a new encryption key and user token.
+  NOTE: The encryption key and user token have to be copied in the same directory where the client-setup.py script is located! Otherwise the client setup will generate a new encryption key and user token.
 
-  You can now start the server: `us --a address --p port`
+  You can now start the server: `sudo us --a address --p port`
 
-  The server script will create an *err_log.txt* file for errors occurred during runtime and a *conn_log.txt* file for logging incoming connections.
+  The server creates an *err_log.txt* file for errors occurred during runtime and a *conn_log.txt* file for logging incoming connections.
   
 
 ## 3. Client setup
 
-To setup the client on a device you want to install it run the following code:
+To setup the client on a device run the following code:
 
-`python3 client-setup.py`
+`sudo python3 client-setup.py`
 
    You can now run the command `uc -h` to see all available options. By running the script for the first time the programm will guide you through the server configuration.
 
@@ -40,8 +40,8 @@ To setup the client on a device you want to install it run the following code:
 
 ## 4. Additional security feature
 
-*usi.py* is an optional security file. It creates integrities of the files *key.txt*, *token.txt* and *valid-token.txt*. Therefore it can be excluded if these files have been compromised. You can setup it by the command:
+*usi.py* is an optional security script. It creates integrities of the files *key.txt*, *token.txt* and *valid-token.txt*. Therefore it can be excluded that these files have been compromised. You can use it by the following command:
 
-`python3 usi.py`
+`sudo python3 usi.py`
 
 
