@@ -1,0 +1,95 @@
+#!/bin/python3
+import time
+import os
+import argparse
+import math
+
+file = "/etc/screentime/screentime.md"
+path = "/etc/screentime/"
+
+def time_tracker():
+    print("screentime tracking started.")
+    count = fetch_time()
+    while True: 
+        time.sleep(1)
+        count += 1
+        file_writer(str(count))
+
+def file_writer(time_count):
+    check_dir(path)
+    with open(file, 'w') as f:
+        f.write(time_count)
+    f.close()
+        
+def parse_time():
+    endTime = fetch_time()
+    minute = 60.00
+    hours = 3600.00
+    days = 86400.00
+    pr_sec = ' s'
+    pr_min = ' m, '
+    pr_hrs = ' h, '
+    pr_ds = ' d, '
+    if endTime < minute:
+        endTime = round(endTime, 2)
+        timeOutput = str(endTime) + pr_sec
+    elif endTime >= minute and endTime < hours:
+        minutes = endTime / minute
+        minutes = math.floor(minutes)
+        diff = minutes * minute
+        seconds = endTime - diff 
+        timeOutput = str(minutes) + pr_min + str(int(seconds)) + pr_sec 
+    elif endTime >= hours and endTime < days:
+        hour = endTime / hours
+        hour = math.floor(hours)
+        diff = hour * hours
+        time_left = endTime - diff
+        minutes = time_left / minute
+        minutes = math.floor(minutes)
+        diff = minutes * minute
+        seconds = time_left - diff
+        timeOutput = str(hour) + pr_hrs + str(minutes) + pr_min + str(int(seconds)) + pr_sec 
+    else:
+        endTime /= days
+        days = math.floor(days)
+        diff = days * day
+        time_left = endTime - diff
+        hour = time_left / hours
+        hour = math.floor(hour)
+        diff = hour * hours
+        time_left = endTime - diff
+        minutes = time_left / minute
+        minutes = math.floor(minutes)
+        diff = minutes * minute
+        seconds = time_left - diff
+        timeOutput = str(hour) + pr_hrs + str(minutes) + pr_min + str(int(seconds)) + pr_sec        
+    print("Screentime: ", timeOutput)
+
+def fetch_time():
+    if os.path.exists(file):
+        with open (file, 'r') as f:
+            time_count = f.read()
+        f.close()
+        time_count = float(time_count)
+        return time_count
+    else:
+        return 0
+
+def check_dir(dirPath):
+    if os.path.exists(str(dirPath)):
+        pass
+    else:
+        print(f'directory {dirPath} not exists --> creating...')
+        os.makedirs(dirPath)
+
+def main():
+    parser = argparse.ArgumentParser(description="screentime tracker")
+    parser.add_argument("-s", "--show", action="store_true", help="prints screentime")
+    parser.add_argument("-t", "--track", action="store_true", help= "starts tracking")
+    args = parser.parse_args()
+    if args.show:
+        parse_time()
+    else:
+        time_tracker()
+    
+main()

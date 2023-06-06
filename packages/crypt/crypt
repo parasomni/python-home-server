@@ -1,0 +1,136 @@
+#!/usr/bin/python3
+# encrypter script
+import argparse
+import os 
+import sys
+from cryptography.fernet import Fernet
+
+class colors:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    WHITE = '\033[97m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+
+def locate_file(inpName):
+    print(f'searching for {inpName}...')  
+    result = ''
+    found = False
+    for path, dirs, files in os.walk('/'):
+        for name in dirs:
+            if inpName == name:
+                result = os.path.join(path, inpName)
+                print(f'located: {colors.YELLOW + result + colors.WHITE}')
+                return result
+        for name in files:
+            if inpName == name: 
+                result = os.path.join(path, inpName)
+                print(f'located: {colors.YELLOW + result + colors.WHITE}')
+                return result
+    if not found:
+        print(f'no match for {colors.RED + inpName + colors.WHITE}')
+    else:
+        pass
+
+def encr_file(path, key):
+        fernet = Fernet(key)
+        with open(path, 'rb') as encrfile:
+            data = encrfile.read()
+        encrfile.close()
+        encryptedData = fernet.encrypt(data)
+        with open(path, 'wb') as encrfile:
+            encrfile.write(encryptedData)
+        encrfile.close()        
+        print("encrypted file ", path)
+    
+def decr_file(path, key):
+        fernet = Fernet(key)
+        with open(path, 'rb') as encrfile:
+            data = encrfile.read()
+        encrfile.close()
+        encryptedData = fernet.decrypt(data)
+        with open(path, 'wb') as encrfile:
+            encrfile.write(encryptedData)
+        encrfile.close()        
+        print("decrypted file ", path)
+
+def encr_path(directory, keyfile):
+    for dirpath, dirname, dirfiles in os.walk(directory):
+        for file_name in dirfiles:
+            file_name = dirpath + '/' + file_name
+            encr_file(file_name, keyfile)
+
+def decr_path(directory, keyfile):
+    for dirpath, dirname, dirfiles in os.walk(directory):
+        for file_name in dirfiles:
+            file_name = dirpath + '/' + file_name
+            decr_file(file_name, keyfile)
+        
+
+def generate_key():
+    key = Fernet.generate_key()
+    with open("keyfile.txt", "wb") as f:
+        f.write(key)
+    f.close()
+    path = os.getcwd() + '/keyfile.txt'
+    print(f"keyfile written to {path}")
+        
+
+def main():
+    parser = argparse.ArgumentParser(description="Encryption/Decryption tool")    
+    parser.add_argument("-d", "--decr", action="store_true", help="decription mode")
+    parser.add_argument("-e", "--encr", action="store_true", help="encryption mode")
+    parser.add_argument("-kf", dest="keyfile", help="key to encr/decr file")
+    parser.add_argument("-ks", dest="string", help="pass key as string")
+    parser.add_argument("-f" , dest="locate", help="searches filesystem for filename")
+    parser.add_argument("-l", dest="file", help="file to encr/decr")
+    parser.add_argument("-r", dest="directory", help="directory to encr/decr")
+    parser.add_argument("-g", "--generate", action="store_true", help="generates a new keyfile")
+    args = parser.parse_args()
+    if args.generate:
+        generate_key() 
+        sys.exit()
+    path = ''
+    key = ''
+    if args.string:
+        key = args.string
+        key = key.encode()
+    else:
+        with open(args.keyfile, 'rb') as keyFile:
+            key = keyFile.read()
+        keyFile.close()
+    if args.locate:
+        path = locate_file(args.locate)
+    elif args.file:
+        if args.file[0] == '/':
+            pass
+        else:
+            path = os.getcwd() + '/' + args.file
+        if os.path.exists(path):
+            pass
+        else:
+            sys.exit("ERROR: file %s not found" % args.file)
+                
+    else:
+        if args.directory[0] == '/':
+            pass
+        else:
+            args.directory = os.getcwd() + '/' + args.directory
+        if os.path.exists(args.directory):
+            pass
+        else:
+            sys.exit("ERROR: directory %s not found." % args.directory )
+    if args.encr:
+        if args.file or args.locate:
+            encr_file(path, key)
+        else:
+            encr_path(args.directory, key)
+    else: 
+        if args.file or args.locate:
+            decr_file(path, key)
+        else:
+            decr_path(args.directory, key)
+    
+    
+
+main()

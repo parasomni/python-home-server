@@ -1,0 +1,92 @@
+#!/bin/python3
+
+import subprocess
+import shlex
+import argparse
+import os
+
+def execute(cmd):
+    print('executing command: ', cmd)   
+    cmd = cmd.strip()
+    output = ''
+    if not cmd:
+        return
+    try:
+        output = subprocess.check_output(shlex.split(cmd),
+                                     stderr=subprocess.STDOUT)
+    except Exception as e:
+        print(e)
+        pass
+    if output == b'':
+        pass
+    else:
+        print(output)     
+
+def fix_name(name):
+    if ' ' in name:
+        name = "'" + name + "'"
+        return name
+    
+    else:
+        return name
+
+def process(dir_, user, code):
+    if user == 0:
+        command = 'chmod '+ code + ' ' + dir_
+        execute(command)     
+    elif code == 0:
+        command = 'chown ' + user + ':' + user + ' ' + dir_
+        execute(command)
+    else:    
+        command = 'chown ' + user + ':' + user + ' ' + dir_
+        execute(command)                
+        command = 'chmod '+ code + ' ' + dir_
+        execute(command)       
+    for path, dirs, files in os.walk(dir_):
+        for directory in dirs:
+            directory = fix_name(directory)
+            if user == 0:
+                command = 'chmod '+ code + ' ' + path + '/' + directory
+                execute(command)     
+            elif code == 0:
+                command = 'chown ' + user + ':' + user + ' ' + path + '/' + directory
+                execute(command)
+            else:    
+                command = 'chown ' + user + ':' + user + ' ' + path + '/' + directory
+                execute(command)                
+                command = 'chmod '+ code + ' ' + path + '/' + directory
+                execute(command)            
+        for file in files:
+            file = fix_name(file)
+            if user == 0:
+                command = 'chmod '+ code + ' ' + path + '/' + file
+                execute(command)                
+            elif code == 0:    
+                command = 'chown ' + user + ':' + user + ' ' + path + '/' + file
+                execute(command)
+            else:
+                command = 'chown ' + user + ':' + user + ' ' + path + '/' + file
+                execute(command)
+                command = 'chmod '+ code + ' ' + path + '/' + file
+                execute(command)
+
+def main():
+    parser = argparse.ArgumentParser(description='Tool to change user permissions of directories and their included files')
+    parser.add_argument('dir', help='directory to change permissions to')
+    parser.add_argument('-user', help='user to change permissions to')
+    parser.add_argument('-code', help='chmod code to permission to')
+    args = parser.parse_args()
+    
+    if not args.code and not args.user:
+        sys.exit('ERROR: more arguments needed')
+    elif not args.code:
+        process(args.dir, args.user, 0)
+    elif not args.user:
+        process(args.dir, 0, args.code)
+    else:
+        process(args.dir, args.user, args.code)
+   
+    
+
+if __name__ in "__main__":
+    main()
