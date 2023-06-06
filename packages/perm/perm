@@ -74,7 +74,7 @@ def main():
     parser = argparse.ArgumentParser(description='Tool to change user permissions of directories and their included files')
     parser.add_argument('dir', help='directory to change permissions to')
     parser.add_argument('-user', help='user to change permissions to')
-    parser.add_argument('-code', help='chmod code to permission to')
+    parser.add_argument('-code', help='chmod code to change permissions to')
     args = parser.parse_args()
     
     if not args.code and not args.user:
