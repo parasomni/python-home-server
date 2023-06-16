@@ -824,7 +824,6 @@ class TCPServer:
                     clientSock.send(cOP.OK.encode())
                     packageList = []
                     versionList = []
-                    i = 0
                     output = "Available packages:\r\n"
                     for dirpath, dirnames, dirfiles in os.walk(userArray[userID] + '/ultron-server/packages/'):
                         for name in dirnames:
@@ -837,9 +836,8 @@ class TCPServer:
                                 versionList.append(fileData)
                             else:
                                 pass
-                        i+=1
                             
-                    for x in range(len(packageList) - 1):
+                    for x in range(len(packageList)):
                         output += f"""---------------------------------
 package: {packageList[x]}
 version: {versionList[x]}"""
