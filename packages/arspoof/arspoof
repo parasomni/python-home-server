@@ -107,7 +107,7 @@ def main():
     parser = argparse.ArgumentParser(description="ARP-spoofer version 1.0.3")
     parser.add_argument("gateway", help="specify the gateway ip address")
     parser.add_argument("-t", dest="target", help="specify the target ip address")
-    parser.add_argument("-all", action="store_true", help="spoofs all subnet ip address")
+    parser.add_argument("-all", action="store_true", help="spoofs all subnet ip addresses")
     args = parser.parse_args()
     
     if args.target:
