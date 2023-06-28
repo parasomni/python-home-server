@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 # integrity script for ultron_server
+# version 1.0.2
+
 import hashlib
 import sys
 import os
@@ -10,8 +12,6 @@ class colors:
     WHITE = '\033[97m'
     YELLOW = '\033[93m'
     BLUE = '\033[94m'
-
-
 
 def check_dir(dirPath, x):
         if os.path.exists(str(dirPath)):
@@ -39,15 +39,14 @@ def write_file(hash_str, txt_path_):
         f.write(hash_str)
     f.close()
 
-def find_files(ultronDir):
+def find_files():
     hash_string = ['', '', '', '']
     print('searching files')
     # find files in the given path
     fileArray = [
-    '/ultron_server/err_log.txt',
-    '/ultron_server/key.txt',
-    '/ultron_server/token.txt',
-    '/ultron_server/valid_token.txt'
+    '/etc/ultron-server/key.txt',
+    '/etc/ultron-server/token.txt',
+    '/etc/ultron-server/valid_token.txt'
     ]
     for i in range(4):
         hash_string[i] = check_dir(fileArray[i], i)
@@ -74,20 +73,20 @@ def cmp_hashes(h1, h2, h3, h4, f1, f2, f3, f4):
     digit2 = 64
     for x in range (4):
         hashHash = hash_string[x]
-        if not os.path.exists('hashes.txt'):
+        if not os.path.exists('/etc/ultron-server/hashes.txt'):
             print('hash file not exists. writing hashes to hashfile...')
             fin_hash = ''
             for a in range (4):
                 hash_string[a] += ','
                 fin_hash += hash_string[a]
-            with open('hashes.txt', 'a') as hashFile:
+            with open('/etc/ultron-server/hashes.txt', 'a') as hashFile:
                 hashFile.write(fin_hash)
             hashFile.close()
             print('job done. quitting')
             sys.exit()
         else:
             print('collecting hashes from hashfile...')
-            with open('hashes.txt', 'r') as hashFile:
+            with open('/etc/ultron-server/hashes.txt', 'r') as hashFile:
                 hashes = hashFile.read()
             hashFile.close()
             for i in range (10):
@@ -104,26 +103,10 @@ def cmp_hashes(h1, h2, h3, h4, f1, f2, f3, f4):
             digit1 += 64
             digit2 += 64
 
-
-def read_config():
-    with open('config.txt', 'r') as confFile:
-        configs = confFile.read()
-    confFile.close()
-    # config_read algorithm
-    ultronPath = ''
-
-    posCom = configs.find(',')
-    if int(posCom) == -1:
-        ultronPath = configs
-        return ultronPath
-    else:
-        return ultronPath
-
-
 def main():
     print('collecting information...')
     ultronPath = read_config()
-    find_files(ultronPath)
+    find_files()
     print('job done. quitting')
 
 try: 
