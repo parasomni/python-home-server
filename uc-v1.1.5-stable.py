@@ -1019,6 +1019,12 @@ def client_start():
             except KeyboardInterrupt:
                 sys.exit("\r\n")
             pass
+            
+        elif sys.argv[sysnumberone] == 'search':
+            try:
+                package = sys.argv[sysnumbertwo]
+            except Exception:
+                sys.exit("ERROR: no package specified for search")            
         
         elif sys.argv[sysnumberone] == 'sync':
             operand_unsupported()    
@@ -1139,7 +1145,6 @@ def client_start():
                     sys.exit("\r\n")      
             
             elif sys.argv[sysnumberone] == 'search':
-                package = sys.argv[sysnumbertwo]
                 try:
                     client.search(token, package)
                 except KeyboardInterrupt:
