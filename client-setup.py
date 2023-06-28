@@ -68,5 +68,5 @@ else:
         file.close()
 print(f'user-token written to {ultron_path}token.txt')
 print('setting up triggers')
-os.system('cp uc-v1.1.4-stable.py /usr/bin/uc')
+os.system('cp uc-v1.1.5-stable.py /usr/bin/uc')
 os.system('chmod +x /usr/bin/uc')
