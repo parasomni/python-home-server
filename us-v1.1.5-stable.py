@@ -843,7 +843,7 @@ class TCPServer:
                             else:
                                 pass
                                   
-                    for x in range(len(packageList) - 1):
+                    for x in range(len(packageList)):
                         output += f"""---------------------------------
 package: {packageList[x]}
 version: {versionList[x]}"""
