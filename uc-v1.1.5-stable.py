@@ -371,6 +371,7 @@ class TCPClient:
                                     self.clientSock.close()
                                 else:
                                     self.print_log('ERROR: end_check failed: download incomplete')
+                                    self.clientSock.close()
                             else:
                                 self.print_log('SERVER_SIDE_ERROR: closing connection.')
                                 self.clientSock.close()
