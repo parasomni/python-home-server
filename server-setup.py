@@ -86,11 +86,18 @@ f.close()
 print(f'updated file {valid_tokens}')
 
 print("\r\n---server configuration---")
-print("please set the user path the client can access to")
+print("Please set the user path the client can access to")
 client1 = input("client 1:")
 client2 = input("client 2:")
 client3 = input("client 3:")
 client4 = input("client 4:")
+print("ultron-server provides denial of service protection. Therefore it is possible to setup an automated service to contact you in case of an attack.")
+opt = input("Do you want to setup the service? y/n")
+if opt in "y, yes, Yes, Y":
+    print("Please prepare the following requirements: Email address to send log to; Unimportant mail with credentials(it is recommended to create a new email without any personal information)")
+    alert_email = input("Please enter the email address to which upcoming alerts should be reported: ")
+    trash_email = input("Please enter the email address which should report upcoming alerts: ")
+    cred_file = input("Now please specify the credential file which includes the login password of your report email address: ")
 config = f"""
 # server configuration
 
@@ -106,6 +113,15 @@ config = f"""
 # Indicates the vaild token file path
         ,/etc/ultron-server/valid-tokens.txt,
 
+# Denial of Service protection
+# Email address which should report upcoming alerts
+        ,{trash_email},
+
+# Email address to which upcoming alerts should be reported
+        ,{alert_email},
+
+# Credential file which includes login password of report email
+        ,{cred_file},
 
 """
 with open (ultron_path + 'server.cfg', 'w') as f:
