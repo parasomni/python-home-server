@@ -98,6 +98,12 @@ if opt in "y, yes, Yes, Y":
     alert_email = input("Please enter the email address to which upcoming alerts should be reported: ")
     trash_email = input("Please enter the email address which should report upcoming alerts: ")
     cred_file = input("Now please specify the credential file which includes the login password of your report email address: ")
+else:
+    print("passing")
+    alert_email = ''
+    trash_email = ''
+    cred_file = ''
+
 config = f"""
 # server configuration
 
