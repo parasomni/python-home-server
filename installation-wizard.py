@@ -12,7 +12,7 @@ from tkinter.filedialog import askopenfilename
 from tkinter import scrolledtext
 from cryptography.fernet import Fernet
 
-os.system("chown root:root server-setup.py")
+os.system("chown root:root installation-wizard.py")
 
 def token_gen():
     upperCase = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
