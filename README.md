@@ -15,9 +15,9 @@ At first fetch the files from the python-home-server repository:
 
  To setup the server on a device run the following code:
 
-`sudo python3 server-setup.py` 
+ `sudo python3 installation-wizard.py`
 
-  This script generates the private key for the encryption and a user token for authentification. The generated user token is added to the *valid-tokens.txt* file where all valid users are stored in.
+  The program generates the private key for the encryption and a user token for authentification. The generated user token is added to the *valid-tokens.txt* file where all valid users are stored in.
 
   NOTE: The encryption key and user token have to be copied in the same directory where the client-setup.py script is located! Otherwise the client setup will generate a new encryption key and user token.
 
@@ -30,7 +30,7 @@ At first fetch the files from the python-home-server repository:
 
 To setup the client on a device run the following code:
 
-`sudo python3 client-setup.py`
+`sudo python3 installation-wizard.py`
 
    You can now run the command `uc -h` to see all available options. By running the script for the first time the programm will guide you through the server configuration.
 
