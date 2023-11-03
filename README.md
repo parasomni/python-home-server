@@ -19,7 +19,7 @@ At first fetch the files from the python-home-server repository:
 
   The program generates the private key for the encryption and a user token for authentification. The generated user token is added to the *valid-tokens.txt* file where all valid users are stored in.
 
-  NOTE: The encryption key and user token have to be copied in the same directory where the client-setup.py script is located! Otherwise the client setup will generate a new encryption key and user token.
+  NOTE: The encryption key and user token have to be copied in the same directory where the installation-wizard is located! Otherwise the client setup will generate a new encryption key and user token.
 
   You can now start the server: `sudo us --a address --p port`
 
@@ -46,6 +46,6 @@ To setup the client on a device run the following code:
 
 ## 5. Ultron package manager
 
-ultron package manager can be used to download useful tools from the server. As an example you can use the provided *packages* folder which has to be copied to the server directory `/ultron-server/packages`
+ultron package manager can be used to download necessary tools from the server. As an example you can use the provided *packages* folder which has to be copied to the server directory `/ultron-server/packages`
 
 
