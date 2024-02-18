@@ -1,17 +1,20 @@
 #!/usr/bin/python3
-# version 1.1.5
-import socket
-import shutil
-import sys
-import os
-import threading
+# version 1.1.6
 
+# import modules
+import os
+import socket
+import sys
+import shutil
+import threading
 import time
+
 from datetime import datetime
 from getpass import getpass
-
 from cryptography.fernet import Fernet
 
+
+# class for coloured output
 class colors:
     GREEN = '\033[92m'
     RED = '\033[91m'
@@ -19,6 +22,7 @@ class colors:
     YELLOW = '\033[93m'
     BLUE = '\033[94m'
 
+# necessary oparands for communication between client and server
 class cOP:
     size = "333"
     file = "334"
@@ -48,28 +52,39 @@ class cOP:
     encrypt = "000"
     decrpyt = "999"
     search = "876"
-
+    
+    
+# client implementation
 class TCPClient:
 
+    # initializes TCPClient
     def __init__(self, host, port):
+        # defines address and port
         self.serverAddr = host
         self.serverPort = port
+        
+        # defines file paths 
         self.keyfile = '/etc/ultron-server/key.txt'
         self.download = '/home/' + os.getlogin() + '/Documents/ultron-server/downloads/'
         self.package_path = '/etc/ultron-server/packages/'
         self.set_trigger = '/usr/bin/'
-        self.token = ''
-        self.clientSock = 0
+        
+        # defines class variables for communication and output
+        self.token = None
+        self.clientSock = None
         self.stop_thread = False
         self.thread_alive = False
-        self.currSize = 0
+        self.currSize = None
+        self.currDownloadSize = 0
+        self.percStatus = '0.00 %'         
         self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.connection_success = True
-
+        
+    # prints output to stdout
     def print_log(self, msg):
-        current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f'[{current_date_time}] {msg}')
+        self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
+        print(f'[{self.current_date_time}] {msg}')
 
+    # tries to connect to the configured server
     def check_conn(self, serverAddr, serverPort):
         time.sleep(0.5)
         if self.connection_success:
@@ -87,21 +102,22 @@ class TCPClient:
         else:
             pass
     
+    # requests connection from server and returns True or False depending on the server message 
     def request_connection(self, serverAddr, serverPort):
-        # self.print_log(f'creating socket...')
+        # creating socket
+        self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
         self.clientSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print('[' + str(self.current_date_time) + '] connecting to server [' + str(serverAddr) + ']::[' + str(serverPort) + '] ...', end='\r')
         try:
-            check_conn = threading.Thread(target=self.check_conn, args=(serverAddr, serverPort))
-            check_conn.start()
+            # connecting to server 
             self.clientSock.connect((serverAddr, serverPort))
-            self.connection_success = False
             msg = 'connecting to server [' + str(serverAddr) + ']::[' + str(serverPort) + '] ' + colors.GREEN + 'done' + colors.WHITE 
             self.print_log(msg)
             self.print_log(f'welcome to ultron server!')
+            # connection established --> returning True
             return True
         except ConnectionRefusedError:
-            self.connection_success = False
+            # printing connection failed to stdout and closing socket
             msg = 'connecting to server [' + str(serverAddr) + ']::[' + str(serverPort) + '] ' + colors.RED + 'failed' + colors.WHITE
             self.print_log(msg)    
             msg = 'server [' + colors.RED + 'offline' + colors.WHITE + ']'
@@ -109,13 +125,14 @@ class TCPClient:
             self.clientSock.close()
             sys.exit()
         except Exception as error:
-            self.connection_success = False
+            # printing error to stdout and closing socket
             msg = 'connecting to server [' + str(serverAddr) + ']::[' + str(serverPort) + '] ' + colors.RED + 'failed' + colors.WHITE
             self.print_log(msg)            
             self.print_log(error)
             self.clientSock.close()
             sys.exit()
 
+    # encrypts data for communication
     def encrypt_data(self, fileData):
         with open(self.keyfile, 'rb') as keyFile:
             key = keyFile.read()
@@ -123,7 +140,8 @@ class TCPClient:
         fernet = Fernet(key)
         encryptedData = fernet.encrypt(fileData)
         return encryptedData
-
+ 
+    # decrypts data for communication
     def decrypt_data(self, fileData):
         with open(self.keyfile, 'rb') as keyFile:
             key = keyFile.read()
@@ -132,27 +150,37 @@ class TCPClient:
         decryptedData = fernet.decrypt(fileData)
         return decryptedData
 
+    # returns size of directory
     def get_size(self, dir1):
             total_size = 0
-            for dirpath, dirnames, filenames in os.walk(dir1):
-                for f in filenames:
-                    fp = os.path.join(dirpath, f)
-                    # skip if it is symbolic link
-                    if not os.path.islink(fp):
-                        total_size += os.path.getsize(fp)
+            try:
+                if os.listdir(dir1):
+                    for dirpath, dirnames, filenames in os.walk(dir1):
+                        for f in filenames:
+                            fp = os.path.join(dirpath, f)
+                            # skip if it is symbolic link
+                            if not os.path.islink(fp):
+                                total_size += os.path.getsize(fp)
+                else: 
+                    pass
+            except FileNotFoundError:
+                pass
             return total_size
     
+    # checks if some content is missing
     def end_check(self, dirSizeBefore, backupSize, destDir):
             currSize = self.get_size(destDir)
             if currSize == dirSizeBefore:
                 actSize = backupSize
             else:
                 actSize = currSize - dirSizeBefore
-            if backupSize == actSize:
+            if int(backupSize) == int(actSize):
                 return True
             else:
                 return False
             
+    # rotating animation output while downloading
+    # can be disabled to improve performance
     def exec_rotation(self, i, h):
         c1 = '/'
         c2 = '|'
@@ -170,8 +198,9 @@ class TCPClient:
         else:
             return c3
     
+    # progress bar when downloading files
     def print_load_filestatus(self, byteSize, fileSize):
-        current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
         percSize = int(byteSize) / int(fileSize)
         percSize *= 100
         percSize = round(percSize)
@@ -185,22 +214,18 @@ class TCPClient:
                 proccessOutput = hashtagCount + iCount * '.'
                 percProccess = f'{i}%'
                 break
-        outPut = f'[{current_date_time}] loading [{proccessOutput}] {percProccess}'
-        print(outPut,end = '\r')
+        output = f'[{self.current_date_time}] loading [{proccessOutput}] {percProccess}'
+        print(output,end = '\r')
 
-
+    # progress bar when downloading directories
     def print_load_status(self, byteSize, fileSize, destDir, dirSizeBefore, backupSize):
-        current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
         currSize = self.get_size(destDir)
         actSize = int(currSize) - int(dirSizeBefore)
         percSize = int(byteSize) / int(fileSize)
         percSize *= 100
         percSize = round(percSize)
-        hashtagCount = ''
-        percStatus = int(actSize) / int(backupSize) 
-        percStatus *= 100
-        percStatus = '{:.2f}'.format(percStatus)
-        percStatus = f'{percStatus}%'
+        hashtagCount = ''   
         proccessOutput = ''
         percProccess = ''
         for i in range(101):
@@ -210,10 +235,10 @@ class TCPClient:
                 proccessOutput = hashtagCount + iCount * '.'
                 percProccess = f'{i}%'
                 break
-        outPut = f'[{current_date_time}] loading [{proccessOutput}] {percProccess} || {percStatus}'
-        print(outPut,end = '\r')
+        output = f'[{self.current_date_time}] loading [{proccessOutput}] {percProccess} || {self.percStatus}'
+        print(output,end = '\r')
 
-
+    # returns server status
     def ping_request(self):
         self.print_log(f'requesting ping from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.ping.encode())
@@ -227,21 +252,33 @@ class TCPClient:
             self.print_log('server [' + colors.RED + 'offline' + colors.WHITE + ']')
             self.clientSock.close()
 
+    # downloads content from server
     def download_script(self, downloadType, downloadName, clientToken):
+        # requesting transfer
         self.print_log(f'requesting transfer from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.download.encode())
-        time.sleep(0.5)
+        time.sleep(0.2)
+        
+        # authentication
+        # sending client token
         clientToken = clientToken.encode()
         clientToken = self.encrypt_data(clientToken)
         self.clientSock.send(clientToken)
         resp = self.clientSock.recv(1024)
         resp = resp.decode()
+        
+        # recieving message from server
         if resp == cOP.OK:
+            # authentification OK
+            # downloading file
             if downloadType == 0:
+                # sending file operand
                 self.clientSock.send(cOP.file.encode())
                 answ = self.clientSock.recv(1024)
                 answ = answ.decode()
                 if answ == cOP.OK:
+                    # transfer accepted
+                    # sendig filename
                     fileNameEncr = downloadName.encode()
                     fileNameEncr = self.encrypt_data(fileNameEncr)
                     self.clientSock.send(fileNameEncr)
@@ -249,14 +286,19 @@ class TCPClient:
                     resp = resp.decode()
                     if resp == cOP.OK:
                         skip = False
+                        # sending filesize
                         filesize = self.clientSock.recv(1024)
                         filesize = self.decrypt_data(filesize)
                         filesize = filesize.decode()
                         filesize = int(filesize)
+                        
+                        # checking size of file
+                        # if < 1024 then file will be send in one package
                         if filesize < 1024:
                             skip = True                        
                         fileData = ''
-                        current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        
+                        # if filesize higher than 1024, algorithm fetches all packages 
                         while True:
                             if skip == True:
                                 fileBytes = self.clientSock.recv(filesize)
@@ -270,45 +312,77 @@ class TCPClient:
                                 break
                             else:
                                 pass
+                        
+                        # decoding and decrypting content from server
                         fileData = fileData.encode()
                         fileData = self.decrypt_data(fileData)
                         download = self.download + downloadName
+    
+                        # writing download to file
                         with open(download, 'wb') as file:
                             file.write(fileData)
                         file.close()
                         self.print_log(f'file written to {download}. closing connection')
                         self.clientSock.send(cOP.OK.encode())
                         self.clientSock.close()
+                        
+                    # closing socket if file could not be found
                     elif resp == cOP.rst:
                         self.print_log(f'file_not_found_error: closing connection to [{self.serverAddr}]::[{self.serverPort}]')
                         self.clientSock.close()
+                
+                # closing socket if selected operand is not available        
                 else: 
                     self.print_log('ERROR: wrong operand. permission denied from server')
                     self.clientSock.close()
+                    
+            # downloads directoriy and its subdirectories
             elif downloadType == 1:
+                # sending directory operand
                 self.clientSock.send(cOP.directory.encode())
+                
+                # variable to handle transfer
                 transferDone = False
+                
+                # receieving answer from server
                 answ = self.clientSock.recv(1024).decode()
                 self.print_log(f'writing changes to {self.download}')
+                
+                # handling answer
                 if answ == cOP.OK:
+                    # transfer accepted
+                    # sending directory name
                     dirNameEncr = downloadName.encode()
                     dirNameEncr = self.encrypt_data(dirNameEncr)
                     self.clientSock.send(dirNameEncr)
                     found = self.clientSock.recv(1024).decode()
+                    
+                    # directory found?
                     if found == cOP.OK:
+                        # yes 
+                        # receiving size of directory
                         backupSize = self.clientSock.recv(1024)
                         backupSize = self.decrypt_data(backupSize)
                         backupSize = backupSize.decode()
+                        
+                        # variables to handle download in the next step
                         dirSizeBefore = 0
+                        ogDirSize = self.get_size(self.download + downloadName)
                         pathName = None
                         transferVar = False
+                        
+                        # receieving content
                         while not transferDone:
+                            # receiev answer form server if download is finished
                             if not transferVar:
                                 answ = self.clientSock.recv(1024).decode()
                             else: 
                                 answ = cOP.transfer
                                 transferVar = False
+                                
+                            # transfer is still going on
                             if answ == cOP.transfer or answ == cOP.file:
+                                # receieving directory name
                                 if answ == cOP.transfer:
                                     pathName = self.clientSock.recv(1024)
                                     pathName = self.decrypt_data(pathName)
@@ -316,23 +390,32 @@ class TCPClient:
                                     fileStatus = self.clientSock.recv(1024).decode()
                                 else:
                                     fileStatus = cOP.file
+                                
+                                # receieving file 
                                 if fileStatus == cOP.file:
                                     skip = False
+                                    
+                                    # receieving file name
                                     fileName = self.clientSock.recv(1024)
                                     fileName = self.decrypt_data(fileName)
                                     fileName = fileName.decode()
                                     destDir = self.download + pathName
                                     check_dir(destDir)
                                     dirSizeBefore = self.get_size(destDir)
+                                    
+                                    # receieving file size
                                     filesize = self.clientSock.recv(1024)
                                     filesize = self.decrypt_data(filesize)
                                     filesize = filesize.decode()
                                     filesize = int(filesize)
+                                   
+                                    # checking size of file
                                     if filesize < 1024:
                                         skip = True                                        
                                     fileData = ''
-                                    current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                                     self.clientSock.send(cOP.OK.encode())
+                                    
+                                    # if filesize higher than 1024, algorithm fetches all packages                                     
                                     while True:
                                         if skip == True:
                                             fileBytes = self.clientSock.recv(filesize)
@@ -345,65 +428,113 @@ class TCPClient:
                                             break
                                         else:
                                             pass
+                                    
+                                    # decoding content from server
                                     fileData = fileData.encode()
-                                    fileData = self.decrypt_data(fileData)
+                                    fileData = self.decrypt_data(fileData)                                 
                                     download = self.download + pathName + fileName
+                                    
+                                    # writing files 
                                     with open(download, 'wb') as file:
                                         file.write(fileData)
                                     file.close()
+                                    
+                                    # printing log to stdout
                                     logName =  pathName + fileName
-                                    log = f'[{current_date_time}] file written to {logName}.'
+                                    self.currDownloadSize = self.currDownloadSize + len(fileData)
+                                    self.percStatus = self.currDownloadSize / int(backupSize)
+                                    self.percStatus *= 100
+                                    self.percStatus = '{:.2f}'.format(self.percStatus)
+                                    self.percStatus = f'{self.percStatus}%' 
+                                    self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')                                    
+                                    log = f'[{self.current_date_time}] file written to {logName}.'
                                     lengthPath = len(log)
-                                    if lengthPath > 146:
+                                    if lengthPath > 150:
                                         count = 0
                                     else:
-                                        count = 146 - lengthPath
+                                        count = 150 - lengthPath
                                     space = count * ' '
                                     log += space
                                     print(log)
+                                    self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')                                    
+                                    log = f'[{self.current_date_time}] download progress [{self.percStatus}]'
+                                    print(log, end='\r')
+                                    
+                                    # sending "file received" message to server
                                     self.clientSock.send(cOP.OK.encode())
+                                
+                                # transfer goes on
                                 else:
                                     transferVar = True
+                            
+                            # download finished
                             elif answ == cOP.rst:
-                                if self.end_check(dirSizeBefore, backupSize, destDir):
-                                    self.print_log('job done. quitting')
+                                # checking if content is missing
+                                if self.end_check(ogDirSize, backupSize, destDir):
+                                    # all fine
+                                    self.print_log('job done. quitting            ')
                                     transferDone = True
                                     self.clientSock.close()
                                 else:
-                                    self.print_log('ERROR: end_check failed: download incomplete')
+                                    # something is missing
+                                    self.print_log('\r\nERROR: end_check failed: download incomplete')
                                     self.clientSock.close()
+                            
+                            # connection interrupted
                             else:
-                                self.print_log('SERVER_SIDE_ERROR: closing connection.')
+                                self.print_log('\r\nSERVER_SIDE_ERROR: closing connection.')
                                 self.clientSock.close()
                                 transferDone = True      
+                    
+                    # directory not found
                     else:
                         self.print_log(f'directory_not_found_error: closing connection to [{self.serverAddr}]::[{self.serverPort}]')
                         self.clientSock.close()
 
+        # authentification failure
         elif resp == cOP.forbidden:
             self.print_log('403 forbidden: invalid token')
             self.clientSock.close()
+        
+        # server offline
         else:
             self.print_log('server [' + colors.RED + 'offline' + colors.WHITE + ']')
             self.clientSock.close()
 
+    
+    # script to perform a complete scan of the client filesystem on the server
     def listfs(self, clientToken, oFile):
+        # requesting list and sending operand
         self.print_log(f'requesting listfs from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.listfs.encode())
         time.sleep(0.2)
+        
+        # sending client token
         clientToken = str(clientToken).encode()
         clientToken = self.encrypt_data(clientToken)
         self.clientSock.send(clientToken)
+        
+        # receiving answer from server
         answ = self.clientSock.recv(1024)
         answ = answ.decode()
+        
+        # answer OK?
         if answ == cOP.rst:
+            # no
+            # closing socket
             self.print_log(f'connection refused by [{self.serverAddr}]::[{self.serverPort}]')
             self.clientSock.close()
         elif answ == cOP.OK:
+            # yes
+            # sending operands depending on outputfile
             if oFile == 'NULL':
+                # no output file
                 self.clientSock.send(cOP.listfs.encode())
             else:
+                # output file
                 self.clientSock.send(cOP.grep.encode())
+            
+            # algorithm to receive all packages
             fragmentCount = 0
             filesize = self.clientSock.recv(1024)
             filesize = self.decrypt_data(filesize)
@@ -421,52 +552,81 @@ class TCPClient:
                 fileBytes = self.clientSock.recv(1500)
                 fileBytes = fileBytes.decode()
                 fileData += fileBytes
-                #print(f'[{current_date_time}] recieving bytes: {len(fileData)}/{filesize}', end='\r')
                 self.print_load_filestatus(len(fileData), filesize)
                 if filesize == len(fileData):
                     print(f'[{current_date_time}] recieved bytes successfully     ', end='\r')
                     break
+            
+            # decoding and decrypting received data
             fileData = fileData.encode()
             fileData = self.decrypt_data(fileData)
             fileData = fileData.decode()
+            
+            # handling output
             if oFile == "NULL":
+                # no output file
+                # printing to stdout
                 self.print_log('recieved filesystem:\r\n')
                 print(fileData)
             else:
+                # writing data to output file
                 with open(self.download + oFile, 'w') as file:
                     file.write(fileData)
                 file.close()
                 space = 120 * " "
                 self.print_log(f'filesystem written to {self.download + oFile}{space}')
+            
+            # sending operation done and closing socket
             self.clientSock.send(cOP.OK.encode())
             self.clientSock.close()
 
+    
+    # script to verify authentification token
     def test_authtoken(self, clientToken):
-        self.print_log(f'requesting token integrity from [{self.serverAddr}]::[{self.serverPort}]')
+        # requesting token validation
+        self.print_log(f'requesting token validation from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.usertoken.encode())
+        
+        # sending user token
         clientToken = str(clientToken).encode()
         clientToken = self.encrypt_data(clientToken)
         self.clientSock.send(clientToken)
+        
+        # revceiving answer from server
         integrity = self.clientSock.recv(1024)
         integrity = integrity.decode()
+        
+        # token valid?
         if integrity == cOP.OK:
+            # yes
+            # printing to stdout and closing socket
             self.print_log('auth_token valid')
             self.clientSock.close()
         elif integrity == cOP.rst:
+            # no 
+            # printing to stdout and closing socket
             self.print_log('auth_token invalid. Please contact the administrator for a new token')
             self.clientSock.close()
         else:
-            self.print_log('could not answer request. closing connection')
+            # something went wrong. closing socket
+            self.print_log('could not resolve answer from server. closing connection')
             self.clientSock.close()
 
-    def updatedb(self):
-        self.print_log(f'updating db from [{self.serverAddr}]::[{self.serverPort}]')
+
+    # script to update client
+    def updateuc(self):
+        # requesting update
+        self.print_log(f'updating uc from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.serverupdate.encode())
+        
+        # receieving file size
         filesize = self.clientSock.recv(1024)
         filesize = self.decrypt_data(filesize)
         filesize = filesize.decode()
         filesize = int(filesize)
         fileData = ''
+        
+        # reveiving bytes
         while True:
             fileBytes = self.clientSock.recv(1024)
             fileBytes = fileBytes.decode()
@@ -476,27 +636,45 @@ class TCPClient:
                 break
             else:
                 pass
+            
+        # decoding and decrypting bytes
         fileData = fileData.encode()
         fileData = self.decrypt_data(fileData)
         fileData = fileData.decode()
+        
+        # writing update to file
         with open('/usr/bin/uc', 'w') as file:
             file.write(fileData)
         file.close()
+        
+        # printing to stdout and closing socket
         self.print_log('\nupdated successfully')
         self.clientSock.close()
 
+
+    # script to upload a single file
     def upload_script(self, fileDirectory, userFile, userToken):
+        # requesting file upload
+        current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
         self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.upload.encode())
         time.sleep(0.4)
+        
+        # sending user token
         userToken = str(userToken).encode()
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
+        
+        # receiving ansewer from server
         answ = self.clientSock.recv(1024)
         answ = answ.decode()
+        
+        # answer OK?
         if answ == cOP.OK:
-            current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # yes
+            # upload approved
             print(f'[{current_date_time}] sending file...', end='\r')
+            
             # sending fileDirectory
             time.sleep(0.2)
             fileDirectory = str(fileDirectory).encode()
@@ -506,14 +684,19 @@ class TCPClient:
                 data = file.read()
             file.close()
             data = self.encrypt_data(data)
+            
             # sending filesize
             fileSize = len(data)
             fileSize = str(fileSize).encode()
             fileSize = self.encrypt_data(fileSize)
             self.clientSock.send(fileSize)
             time.sleep(0.4)
+            
+            # reveiving answer from server
             self.clientSock.send(data)
             answ = self.clientSock.recv(1024)
+            
+            # analyse answer
             if answ.decode() == cOP.OK:
                 self.print_log('sending file   done')
                 self.clientSock.close()
@@ -522,28 +705,44 @@ class TCPClient:
             else:
                 self.print_log('could not resolve answer from server. quitting')
                 self.clientSock.close()
+        
+        # invalid token
         elif answ == cOP.rst:
             self.print_log('permission denied: token_invalid')
             self.clientSock.close()
+        
+        # something went wrong
         else:
             self.print_log('could not resolve answer from server. quitting')
             self.clientSock.close()
 
+    # script to remove content from server
     def remove_script(self, removeName, userToken):
+        # sending request to server 
         self.print_log(f'requesting removal from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.remove.encode())
         time.sleep(0.2)
+        
+        # sending user token for authentification
         userToken = str(userToken).encode()
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
+        
+        # reveiving answer from server
         answ = self.clientSock.recv(1024)
         answ = answ.decode()
+        # analyse answer
         if answ == cOP.OK:
+            # sending file or directory name to remove
             removePath = removeName
             removeName = removeName.encode()
             removeName = self.encrypt_data(removeName)
+            
+            # receiving answer
             self.clientSock.send(removeName)
             answ = self.clientSock.recv(1024).decode()
+            
+            # analysing answer
             if answ == cOP.OK:
                 self.print_log(f'removed {removePath}')
                 self.clientSock.close()
@@ -551,8 +750,9 @@ class TCPClient:
                 self.print_log(f'ERROR: file_not_found_error: could not locate {removePath}')
                 self.clientSock.close()
 
+    # script to backup directory to server
     def backup_script(self, srcDirectory, dstDirectory, clientToken):
-        
+        # function to count size directory
         def get_size(dir1):
             total_size = 0
             for dirpath, dirnames, filenames in os.walk(dir1):
@@ -563,6 +763,7 @@ class TCPClient:
                         total_size += os.path.getsize(fp)
             return total_size
         
+        # loading animation while backup is pending
         def print_loading_backup():
             h = 4
             i = 2.5
@@ -570,12 +771,15 @@ class TCPClient:
                 rot = self.exec_rotation(i, h)
                 h += 1
                 i += 0.5
+                self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')                
                 print('[' + self.current_date_time + '] preparing backup ', rot, end='\r')
                 if self.stop_thread:
                     break
-                
+        
+        # progress status in percent while sending content     
         def print_punct():
             while True:
+                self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')                
                 if self.stop_thread:
                     break
                 print(f'[{self.current_date_time}]', 'sending files .    (', self.currSize,'%)', end='\r')
@@ -586,7 +790,8 @@ class TCPClient:
                 time.sleep(0.5)
                 print(f'[{self.current_date_time}]', 'sending files      (', self.currSize,'%)', end='\r')
                 time.sleep(0.5)
-        
+    
+        # animation while sending content
         def print_process(sentBytes):
             self.stop_thread = False
             current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -603,80 +808,104 @@ class TCPClient:
                 self.stop_thread = True
                 self.thread_alive = False
 
+        # main function of backups script
         def send_backup():
+            # requesting file transfer
             sentBytes = 0
             self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
             self.clientSock.send(cOP.backup.encode())
             time.sleep(0.2)
+            
+            # sending user token for authentification
             userToken = str(clientToken).encode()
             userToken = self.encrypt_data(userToken)
             self.clientSock.send(userToken)
+            
+            # receiving answer from server
             answ = self.clientSock.recv(1024)
             answ = answ.decode()
+            
+            # analysing answer
             if answ == cOP.OK:
                 rot = threading.Thread(target=print_loading_backup)
                 rot.start()
-                # sending dstDirectory to server
+                
+                # sending destination directory name to server
                 dstDirEncr = str(dstDirectory).encode()
                 dstDirEncr = self.encrypt_data(dstDirEncr)
                 self.clientSock.send(dstDirEncr)
                 time.sleep(0.2)
-                # checking directory
+                
+                # check if directory exists
                 if os.path.exists(str(srcDirectory)):
                     pass
                 else:
                     self.print_log(f'ERROR: could not locate {srcDirectory}')
                     self.clientSock.close()
                     sys.exit()
+                
                 # sending backupsize
                 backupSize = get_size(srcDirectory)
                 backupSize = str(backupSize).encode()
                 backupSize = self.encrypt_data(backupSize)
                 self.clientSock.send(backupSize)
                 time.sleep(0.2)
+                
+                # sending source directory name  
                 srcDirectoryEncr = srcDirectory.encode()
                 srcDirectoryEncr = self.encrypt_data(srcDirectoryEncr)
                 self.clientSock.send(srcDirectoryEncr)
-                time.sleep(0.2)                
-                # fetching files and dirnames from srcDirectory and sending them to server
+                time.sleep(0.2)   
+                
+                # sending directories and its files to the server
                 cut = len(srcDirectory)
                 for dirpath, dirnames, files in os.walk(srcDirectory):
                     # sending status
                     time.sleep(0.2)
                     self.clientSock.send(cOP.backup.encode())
+                    
                     # sending directory name
                     dirpath = dirpath + '/'
                     dirpathEncr = str(dirpath).encode()
                     dirpathEncr = self.encrypt_data(dirpathEncr)
                     self.clientSock.send(dirpathEncr)
                     time.sleep(0.2)
+                    
+                    # handling files and directories
                     for fileName in files:
                         # sending fileOperand
                         time.sleep(0.2)
                         self.clientSock.send(cOP.file.encode())
+                        
                         # sending fileName
                         fileNameEncr = str(fileName).encode()
                         fileNameEncr = self.encrypt_data(fileNameEncr)
                         time.sleep(0.2)
                         self.clientSock.send(fileNameEncr)
+                        
+                        # reading file data
                         with open(dirpath + fileName, 'rb') as fileOpen:
                             fileBytes = fileOpen.read()
                         fileOpen.close()
-                        # sending fileSize
+                        
+                        # sending fileSize of unencrypted file
                         fileSize = len(fileBytes)
                         fileSize = str(fileSize).encode()
                         fileSize = self.encrypt_data(fileSize)
                         time.sleep(0.2)
                         self.clientSock.send(fileSize)
                         time.sleep(0.2)
+                        
                         # printing process
                         sentBytes += len(fileBytes)
                         self.stop_thread = True
                         rot.join()
                         print_process(sentBytes)
+                        
                         # sending bytes
                         fileBytes = self.encrypt_data(fileBytes)
-                        # sending filesize
+                        
+                        # sending filesize of encrypted file
                         fileBytesSize = len(fileBytes)
                         fileBytesSize = str(fileBytesSize).encode()
                         fileBytesSize = self.encrypt_data(fileBytesSize)
@@ -684,6 +913,7 @@ class TCPClient:
                         time.sleep(0.2)
                         self.clientSock.send(fileBytes)
                         time.sleep(0.3)
+                        
                         # waiting for OK from server
                         status = self.clientSock.recv(1024)
                         status = status.decode()
@@ -691,8 +921,12 @@ class TCPClient:
                             pass
                         else:
                             self.print_log(f'message from server: {status}')
+                
+                # transfer finished
                 self.clientSock.send(cOP.OK.encode())
                 time.sleep(0.2)
+                
+                # end check to verify that no data has been lost
                 endCheck = self.clientSock.recv(1024)
                 endCheck = endCheck.decode()
                 if endCheck == cOP.OK:
@@ -702,105 +936,175 @@ class TCPClient:
                 else:
                     self.print_log(f'message from server: {endCheck}')
                     self.clientSock.close()
+            
+            # connection refused by server
             elif answ == cOP.rst():
                 self.print_log('connection refused')
                 self.clientSock.close()
+            
+            # server unreachable
             else:
                 self.print_log('could not resolve response. QUITTING')
                 self.clientSock.close()
+        
+        # error handling
         try:
             send_backup()
         except Exception as e:
             print(e)
     
+    
+    # script to encrypt all content stored on the server
     def crypt(self):
+        # retrieve encryption key from user
         self.print_log("---encryption/decryption mode---")
         key = getpass("Enter key: ")
         key = key.encode()
         key = self.encrypt_data(key)
         answ = input("Do you want to (e)ncrypt or (d)ecrypt your data? »» ")
+        
+        # decryption
         if answ in "d, D":
             self.print_log("Decrypting your data. This may take a while...")
             self.clientSock.send(cOP.decrpyt.encode())
             time.sleep(0.3)
             self.clientSock.send(key)
+        
+        # encryption
         elif answ in "e, E":
             self.print_log("Encrypting your data. This may take a while...")
             self.clientSock.send(cOP.encrypt.encode())
             time.sleep(0.3)
             self.clientSock.send(key)
+        
+        # wrong input
         else:
             sys.exit("ERROR: invalid option detected")
+        
+        # receive server answer
         recv = self.clientSock.recv(1024)
         recv = recv.decode()
         self.print_log(recv)
         self.clientSock.close()
             
+    # script to install packages        
     def install(self, userToken, package):
+        
+        # installs package on system
         def install_package(package):
+            # copies file to binaries /usr/bin
             package_path_complete = self.package_path + package + '/'
             setup_path = package_path_complete + 'setup.py'
             self.print_log('installing triggers')
             shutil.copy(package_path_complete + package, '/usr/bin/' + package)
+            
+            # sets file to executable
             os.system(f'chmod +x /usr/bin/{package}')
+            
+            # runs setup script if available
             if os.path.exists(setup_path):
                 self.print_log('running setup.py')
                 os.system('python3 ' + setup_path) 
             else:
                 pass
+            
+        # request package from server 
         self.print_log(f'installing package from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.package.encode())
         time.sleep(0.2)
+        
+        # sending token for authentification 
         userToken = str(userToken).encode()
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
+        
+        # receiving answer 
         answ = self.clientSock.recv(1024)
         answ = answ.decode()
+        
+        # handling answer
         if answ == cOP.OK:
+            # sending package name
             pkgencr = package.encode()
             pkgencr = self.encrypt_data(pkgencr)
+            
+            # receiving answer
             self.clientSock.send(pkgencr)
             answ = self.clientSock.recv(1024).decode()
+            
+            # package not found
             if answ != cOP.OK:
                 self.print_log(f'requested package {package} not found')
+            
+            # package found
             else:
+                # check if directory already exists 
                 check_dir(self.package_path + package + '/')
+                
+                # receive package size
                 pkgsize = self.clientSock.recv(1024)
                 pkgsize = self.decrypt_data(pkgsize)
                 pgksize = pkgsize.decode()
+                
+                # variables for transfer
                 transferDone = False
                 transferVar = False
                 current_package_size = 0
                 i = 2.5
                 h = 4
+                
+                # handling transfer
                 while not transferDone:
+                    
+                    # receive status from server
                     if not transferVar:
                         answ = self.clientSock.recv(1024).decode()
+                    
+                    # set transfer to ongoing
                     else: 
                         answ = cOP.transfer
                         transferVar = False
+                        
+                    # transfer ongoing    
                     if answ == cOP.transfer or answ == cOP.file:
+                        
+                        # receiving path name for package
                         if answ == cOP.transfer:
                             pathName = self.clientSock.recv(1024)
                             pathName = self.decrypt_data(pathName)
                             pathName = pathName.decode()  
                             check_dir('/etc/' + pathName)
                             fileStatus = self.clientSock.recv(1024).decode()
+                        
+                        # set file status to file
                         else:
                             fileStatus = cOP.file
+                            
+                        # handling file
                         if fileStatus == cOP.file:
+                            # receiving file name
                             fileName = self.clientSock.recv(1024)
                             fileName = self.decrypt_data(fileName)
                             fileName = fileName.decode()
+                            
+                            # set file destination
                             destDir = self.package_path + package + '/'
+                            
+                            # get size of destination directory 
                             dirSizeBefore = self.get_size(destDir)
+                            
+                            # receive file size 
                             filesize = self.clientSock.recv(1024)
                             filesize = self.decrypt_data(filesize)
                             filesize = filesize.decode()
                             filesize = int(filesize)
                             fileData = ''
                             current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            
+                            # send status OK 
                             self.clientSock.send(cOP.OK.encode())
+                            
+                            # receive file bytes
                             while True:
                                 fileBytes = self.clientSock.recv(1024)
                                 fileBytes = fileBytes.decode()
@@ -816,57 +1120,84 @@ class TCPClient:
                                     break
                                 else:
                                     pass
+                                
+                            # decrypt file data
                             fileData = fileData.encode()
                             fileData = self.decrypt_data(fileData)
+                            
+                            # write file 
                             download = '/etc/' + pathName + fileName
                             with open(download, 'wb') as file:
                                 file.write(fileData)
                             file.close()
                             self.clientSock.send(cOP.OK.encode())
+                        
+                        # set transfer to ongoing
                         else:
                             transferVar = True
+                            
+                    # download complete
                     elif answ == cOP.rst:
-                        #if self.end_check(dirSizeBefore, pkgsize, destDir):
                         self.print_log('package download complete')
                         transferDone = True
                         self.clientSock.close()
                         install_package(package)
                         self.print_log(f'[+] package {package} installed successfully.')
-                        #else:
-                        #    self.print_log('ERROR: end_check failed: download incomplete')
+                    
+                    # server side error
                     else:
                         self.print_log('SERVER_SIDE_ERROR: closing connection.')
                         self.clientSock.close()
                         transferDone = True         
+        
+        # package not found
         else:
             self.print_log(f'{package} package not found.')
             self.clientSock.close()      
 
+    # script to list all available packages
     def listall(self, userToken): 
+        # request to list available packages
         self.print_log(f'listing available packages from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(cOP.listall.encode())
         time.sleep(0.2)
+        
+        # sending user token for authentification
         userToken = str(userToken).encode()
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
+        
+        # receiving answer
         answ = self.clientSock.recv(1024)
         answ = answ.decode()
         endData = ''.encode()
+        
+        # analysing answer
         if answ == cOP.OK:
+            
+            # receiving bytes
             while True:
                 data = self.clientSock.recv(1024)
                 endData += data
                 if len(data) < 1024:
                     break
+            
+            # decrypting data
             data = self.decrypt_data(endData)
             data = data.decode()
+            
+            # printing list of available packages
             print(data)
             self.clientSock.close()
             sys.exit()    
+        
+        # authentification token is invalid
         else:
             self.print_log("invalid token")
             sys,exit()
     
+    
+    # checks if package already installed on system
     def check_install(self,package):
         if os.path.exists(self.package_path + package):
             self.print_log(f"[*] package {package} already installed.")
@@ -874,6 +1205,7 @@ class TCPClient:
         else:
             pass
         
+    # removes package from system
     def remove(self, package):
         try:
             shutil.rmtree(self.package_path + package)
@@ -884,30 +1216,47 @@ class TCPClient:
         except Exception as e:
             self.print_log(f'ERROR: {package} package not found.')
     
+    # script to return if package is available 
     def search(self, userToken, package):
+        # request package search
         self.print_log(f"searching available package from [{self.serverAddr}]::[{self.serverPort}]")
         self.clientSock.send(cOP.search.encode())
         time.sleep(0.2)
+        
+        # sending authentifiction token
         userToken = str(userToken).encode()
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
+        
+        # receiving answer
         answ = self.clientSock.recv(1024)
         answ = answ.decode()
         endData = ''.encode()
+        
+        # anaylising answer
         if answ == cOP.OK:
+            # sending package name
             package = self.encrypt_data(package.encode())
             self.clientSock.send(package)
             time.sleep(0.2)
+            
+            # receiving answer
             data = self.clientSock.recv(1024)
             data = self.decrypt_data(data)
             data = data.decode()
+            
+            # printing answer from server
             self.print_log("message from server:")
             print(data)
             self.clientSock.close()
+        
+        # authentification token invalid
         else:
             self.print_log("invalid token")
             sys,exit()        
             
+            
+    # start client        
     def client_start(self):
         try:
             return self.request_connection(self.serverAddr, self.serverPort)
@@ -918,63 +1267,72 @@ class TCPClient:
             sys.exit()
             
 
+# help menu
 def help_menu():
-        print("""
-version 1.1.5
+        print("""ultron client
+version 1.1.6
     uc server instructions: 
 usage: uc <operands> [INPUT]  
-    --auth [TOKENFILE]      # checks token validation
+    --auth [TOKENFILE]      # verify token validity
     --b [SRC_DIR, DST_DIR]  # backup script 
-    --updateuc              # updates client to latest version
+    --updateuc              # update client to latest version
     --updateuc-devops       # only for developer
-    --d -f [FILE]           # downloads selected file
-    --d -r [DIR]            # downloads selected directory
-    --listfs --o [FILE]     # lists complete filesystem    
+    --d -f [FILE]           # download selected file
+    --d -r [DIR]            # download selected directory
+    --listfs --o [FILE]     # list complete filesystem    
     --p                     # ping request 
     --r [FILE/DIR]          # remove script
-    --sync                  # synchronises all data 
-    --u [DEST_PATH, FILE]   # uploads selected file
-    --c                     # encryption/decryption mode
+    --sync                  # synchronise all data 
+    --u [DEST_PATH, FILE]   # upload selected file
+    --c                     # encrypt/decrypt server data
     
     uc package installer:
-usage: uc <options> [PACKAGE]
-    install  # installs the requested package if available 
-    remove   # removes the selected package from system
-    update   # updates the selected package
-    search   # checks if the package is available
-    list-all # lists all packages including their current development status
-    sync     # synchronises all packages 
+usage: uc <operand> [PACKAGE]
+    install  # install a package 
+    remove   # remove a package from the host system
+    update   # update a selected package
+    search   # check if the package is available
+    list-all # list all available packages
+    sync     # synchronise all packages 
             """)
 
+
+# check if directory already exists
 def check_dir(dirPath):
     current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     if os.path.exists(str(dirPath)):
-        #self.print_log(f'Directory {dirPath} exists.')
         pass
     else:
         print(f'[{current_date_time}] Directory {dirPath} does not exist --> creating...')
         os.makedirs(dirPath)
 
+# opperand is not supported
 def operand_unsupported():
     print('Sorry. This feature is still in development and currently unavailable.')
     sys.exit()
 
+
+# read token from file
 def recieve_token(tokenfile):
     with open(tokenfile, 'r') as file:
         token = file.read()
     file.close()
     return token
 
-
+# list for available options
 opList = [
     "-h", "--h", "-help", "--sync", "--h","--r","--d", "--p", "--b", "--u", "--updateuc", "--auth", "--listfs",
     '--updateuc-devops','install', 'remove', 'search', 'update', 'list-all', 'sync', "--c"
 ]
 
+
+# main function 
 def client_start():
+    # config variables
     tokenfile = '/etc/ultron-server/token.txt'
     token = recieve_token(tokenfile)
     configfile = '/etc/ultron-server/config.csv'
+    
     # extract/create server configuration
     serverport = 0
     serveraddr = ''
@@ -999,6 +1357,7 @@ def client_start():
         configFile.close()
         print("configuration written to ", configfile)
     
+    # handling arguments 
     client = TCPClient(serveraddr, int(serverport))   
     sysnumberone = 1
     sysnumbertwo = 2
@@ -1008,18 +1367,11 @@ def client_start():
     elif sys.argv[sysnumberone] in opList:
         if sys.argv[sysnumberone] == 'remove':
             package = sys.argv[sysnumbertwo]
-            try:
-                client.remove(package)
-            except KeyboardInterrupt:
-                sys.exit("\r\n")
+            client.remove(package)
             sys.exit()
         elif sys.argv[sysnumberone] == 'install':
             package = sys.argv[sysnumbertwo]
-            try:
-                client.check_install(package)
-            except KeyboardInterrupt:
-                sys.exit("\r\n")
-            pass
+            client.check_install(package)
             
         elif sys.argv[sysnumberone] == 'search':
             try:
@@ -1054,6 +1406,8 @@ def client_start():
                     client.download_script(downloadType, downloadName, token)
                 except KeyboardInterrupt:
                     sys.exit("\r\n^C")
+                except Exception as e:
+                    sys.exit(f'ERROR: {e}')
                     
             elif sys.argv[sysnumberone] == "--p":
                 try:
@@ -1086,7 +1440,7 @@ def client_start():
 
             elif sys.argv[sysnumberone] == "--updateuc":
                 try:
-                    client.updatedb()
+                    client.updateuc()
                 except KeyboardInterrupt:
                     sys.exit("\r\n")
                     
@@ -1149,29 +1503,15 @@ def client_start():
                 try:
                     client.search(token, package)
                 except KeyboardInterrupt:
-                    sys.exit("\r\n")  
-            """        
-            elif sys.argv[sysnumberone] == 'update':
-                package = sys.argv[sysnumbertwo]
-                try:
-                    client.update(token, package)
-                except KeyboardInterrupt:
-                    sys.exit("\r\n")
-            """            
-
+                    sys.exit("\r\n")        
     else:
         help_menu()
 
 
-#client_start() # debugg 
-#"""
-try:
-    client_start()
-except Exception as error:
-    if str(error) == '':
-        error = 'unknown'
-    print('\r\nSYS_ERROR: ', str(error))
-#"""
+# start client
+if __name__ in "__main__":
+    client_start() 
+
 
     
 
