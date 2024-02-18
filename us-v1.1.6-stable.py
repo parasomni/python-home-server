@@ -1030,7 +1030,7 @@ version: {version}"""
             curr_con = self.total_con
             time.sleep(10)
             ddos_con = self.total_con - curr_con 
-            if ddos_con > self.max_conn_number_ddos:
+            if ddos_con > int(self.max_conn_number_ddos):
                 self.shutdown_server()
                 log = colors.RED + "SECURITY ALERT! DDoS Attack detected!" + colors.WHITE
                 self.print_log(log)
