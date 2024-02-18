@@ -309,7 +309,7 @@ def install_client():
             
         update_text('setting up triggers')
         try:
-            os.system('cp uc-v1.1.5-stable.py /usr/bin/uc')
+            os.system('cp uc-v1.1.6-stable.py /usr/bin/uc')
             os.system('chmod +x /usr/bin/uc')
             update_text("successfully installed ultron-client!")
         except Exception as e:
