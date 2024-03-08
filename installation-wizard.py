@@ -64,7 +64,6 @@ def install_server():
     global trash_email
     global time_delay
     global max_number_conn_ddos
-
     check_dir(ultron_path)
     
     def complete_setup():
@@ -155,7 +154,7 @@ def install_server():
                 os.system('cp us-v1.1.6-stable.py /usr/bin/us')
                 os.system('chmod +x /usr/bin/us')
                 update_text("successfully installed ultron-server!")
-            except Excpetion as e:
+            except Exception as e:
                 update_text(e)
             
         client1 = ent_client1.get()

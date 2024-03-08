@@ -6,18 +6,15 @@
 # merging authtoken_check and user_config
 # merging fetch_dir and check_dir
 
-#import modules
+# import required modules
 import socket
 import shutil
 import smtplib
 import sys
-import random
 import threading
-import hashlib
 import os
 import time
 
-from os import scandir
 from datetime import datetime
 from cryptography.fernet import Fernet
 from http import client
@@ -88,7 +85,6 @@ def write_ddos_log(log):
 
 # server implementation
 class TCPServer:
-
     # initialize server
     def __init__(self, host, port):
         # load configuration
@@ -167,7 +163,6 @@ class TCPServer:
                     total_size += os.path.getsize(fp)
         return total_size
 
-
     # check if tokens are equal
     def token_check(self, recvToken, token):
         if recvToken.decode() == token:
@@ -194,8 +189,7 @@ class TCPServer:
                 for i in range(num_token):
                     valid_token[i] = tokens[x:x1]
                     x1 = x1 + 31
-                    x = x + 31
-                
+                    x = x + 31               
                 self.print_log(f'checking token integrity from {clientAddr}')
                 for i in range(num_token):
                     if valid_token[i] == clientToken:
@@ -224,7 +218,6 @@ class TCPServer:
             valid_token[i] = tokens[x:x1]
             x1 = x1 + 31
             x = x + 31
-
         for i in range(num_token):
             self.print_log(f'checking token integrity from {clientAddr}')
             if valid_token[i] == clientToken:
@@ -248,30 +241,26 @@ class TCPServer:
         else:
             fileDir = 'not available'
         return fileDir
-
+    
     # file handling
     def handle_file(self, clientSock, clientAddr, fileDirectory):
-        self.print_log(f'recieving file-info from {clientAddr}')
-        
+        self.print_log(f'recieving file-info from {clientAddr}')      
         # recieving fileName
         fileName = clientSock.recv(1024)
         fileName = self.decrypt_data(fileName)
         fileName = fileName.decode()
         fileFormat = fileName[-4:]
-        self.print_log(f'recied fileName {fileName} from {clientAddr}')
-        
+        self.print_log(f'recied fileName {fileName} from {clientAddr}')       
         # recieving fileSize
         fileSize = clientSock.recv(1024)
         fileSize = self.decrypt_data(fileSize)
         fileSize = fileSize.decode()
-        self.print_log(f'recied fileSize {fileSize} from {clientAddr}')
-        
+        self.print_log(f'recied fileSize {fileSize} from {clientAddr}')        
         # recieving fileBytesSize
         fileBytesSize = clientSock.recv(1024)
         fileBytesSize = self.decrypt_data(fileBytesSize)
         fileBytesSize = fileBytesSize.decode()
-        self.print_log(f'recieved fileBytesSize {fileBytesSize} from {clientAddr}')
-        
+        self.print_log(f'recieved fileBytesSize {fileBytesSize} from {clientAddr}')       
         # recieving bytes from file
         self.print_log(f'recieving fileBytes from {clientAddr}')
         fragmentCount = 0
@@ -287,15 +276,13 @@ class TCPServer:
                 break
             else:
                 self.print_log(f'fileBytes missing from {clientAddr}')
-                pass
-        
+                pass     
         # decrypting and decoding data
         self.print_log(f'decrypting and decoding bytes from {clientAddr}')
         fileData = fileData.encode()
         fileData = self.decrypt_data(fileData)
         specFileFormat = False
-        time.sleep(self.time_delay)
-        
+        time.sleep(self.time_delay)       
         # writing file
         if not specFileFormat:
             self.print_log(f'file recieved from {clientAddr} with {len(fileData)} bytes. writing to directory')
@@ -305,7 +292,6 @@ class TCPServer:
             self.print_log(f'file from {clientAddr} written to {fileDirectory + fileName}')
         fileSize = int(fileSize)
         self.print_log(f'comparing fileSize {fileSize} == {len(fileData)}')
-        
         # sending finish and closing socket
         if fileSize == len(fileData):
             self.print_log(f'filesize OK. sending answer to {clientAddr}')
@@ -318,20 +304,19 @@ class TCPServer:
             clientSock.send(message.encode())
             clientSock.close()
     
+    def send_package():
+    
     # main function of request handling
     def handling_options(self, clientSock, clientAddr, data):
             # decoding request
             data = data.decode()
-            userArray = [self.client1, self.client2, self.client3, self.client4]
-            
+            userArray = [self.client1, self.client2, self.client3, self.client4]           
             # backup request
-            if data == cOP.backup:
-                
+            if data == cOP.backup:           
                 # user identification --> necessary for client system path
                 userID = self.user_config(clientSock, clientAddr)
                 fileTransfer = True
-                global isDir
-                
+                global isDir         
                 if userID not in (0,1,2,3):
                     error = f'closing connection to {clientAddr}: invalid auth_token'
                     write_log(error)
@@ -340,29 +325,25 @@ class TCPServer:
                     clientSock.close()
                 else:
                     clientSock.send(cOP.OK.encode())
-                    self.print_log(f'preparing backup from {clientAddr}')
-                    
+                    self.print_log(f'preparing backup from {clientAddr}')                  
                     # recieving destDirectory
                     self.print_log(f'recieving Directory from {clientAddr}')
                     destDir = clientSock.recv(1024)
                     destDir = self.decrypt_data(destDir)
                     destDir = destDir.decode()
-                    isDir = False
-                    
+                    isDir = False                  
                     # recieving backupsize
                     self.print_log(f'recieving backup-size from {clientAddr}')
                     backupSize = clientSock.recv(2048)
                     backupSize = self.decrypt_data(backupSize)
                     backupSize = backupSize.decode()
-                    self.print_log(f'recieving directory name from {clientAddr}')
-                    
+                    self.print_log(f'recieving directory name from {clientAddr}')                 
                     # getting dirSizeBefore
                     first_dir_name = clientSock.recv(2048)
                     first_dir_name = self.decrypt_data(first_dir_name)
                     first_dir_name = first_dir_name.decode()
                     self.check_dir(userArray[userID] + destDir)
-                    dirSizeBefore = self.get_size(userArray[userID] + destDir + first_dir_name)                    
-                    
+                    dirSizeBefore = self.get_size(userArray[userID] + destDir + first_dir_name)                                     
                     # recieving backup
                     while fileTransfer:
                         # recieving fileTransfer status
@@ -372,17 +353,14 @@ class TCPServer:
                             status = status.decode()
                         else:
                             pass
-                        global dirName
-                        
+                        global dirName                     
                         # backup ongoing
                         if status == cOP.backup:
-                            self.print_log(f'recieving fileDirectoryName from {clientAddr}')
-                            
+                            self.print_log(f'recieving fileDirectoryName from {clientAddr}')                         
                             # recieving directory name
                             dirName = clientSock.recv(1024)
                             dirName = self.decrypt_data(dirName)
-                            dirName = dirName.decode()
-                            
+                            dirName = dirName.decode()                         
                             # checking Directory
                             self.check_dir(userArray[userID] + destDir + dirName)
                             self.print_log(f'recieving fileRequestOperand from {clientAddr}')
@@ -395,25 +373,21 @@ class TCPServer:
                                 self.print_log(f'recieved fileTransferStatus from {clientAddr}')
                                 isDir = True
                             else:
-                                self.print_log(req)
-                                
+                                self.print_log(req)                              
                         # backup ongoing -> receiving file        
                         elif status == cOP.file:
                             self.handle_file(clientSock, clientAddr, userArray[userID] + destDir + dirName)
-
                         # backup complete    
                         elif status == cOP.OK:
                             userDir = userArray[userID] + destDir + dirName
-                            currSize = self.get_size(userDir)
-                            
+                            currSize = self.get_size(userDir)                           
                             # check that there was no data loss
                             if currSize == dirSizeBefore:
                                 actSize = backupSize
                             else:
                                 actSize = currSize - dirSizeBefore
                             self.print_log(f'checking directories {userDir} and {destDir}')
-                            self.print_log(f'recieved status OK from {clientAddr}: recieving bytes {actSize}/{backupSize}')
-                            
+                            self.print_log(f'recieved status OK from {clientAddr}: recieving bytes {actSize}/{backupSize}')                           
                             if int(backupSize) == int(actSize):
                                 # transfer finished
                                 fileTransfer = False
@@ -430,12 +404,10 @@ class TCPServer:
                         else:
                             self.print_log(f'closing connection to {clientAddr}: closed by cient')
                             fileTransfer = False
-                            clientSock.close()
-            
+                            clientSock.close()           
             # download request                
             elif data == cOP.download:
-                done = False
-                
+                done = False              
                 # user identification --> necessary for client system path                
                 userID = self.user_config(clientSock, clientAddr)
                 if userID not in (0,1,2,3):
@@ -447,24 +419,21 @@ class TCPServer:
                 else:
                     clientSock.send(cOP.OK.encode())
                     transferType = clientSock.recv(1024)
-                    transferType = transferType.decode()
-                    
+                    transferType = transferType.decode()                  
                     # download file
                     if transferType == cOP.file:
                         # receiving file name
                         clientSock.send(cOP.OK.encode())
                         fileName = clientSock.recv(1024)
                         fileName = self.decrypt_data(fileName)
-                        fileName = fileName.decode()
-                        
+                        fileName = fileName.decode()                      
                         # search if file does exist
                         self.print_log(f'searching requestet file for {clientAddr}')
                         for dirpath, dirnames, files in os.walk(userArray[userID], topdown=False):
                             for file_name in files:
                                 # file found
                                 if file_name == fileName:
-                                    self.print_log(f'file found. sending to client {clientAddr}')
-                                    
+                                    self.print_log(f'file found. sending to client {clientAddr}')                                  
                                     # reading file data and sending to client
                                     clientSock.send(cOP.OK.encode())
                                     filePath = dirpath+ "/" + file_name
@@ -479,8 +448,7 @@ class TCPServer:
                                     time.sleep(self.time_delay)
                                     clientSock.send(data)
                                     self.print_log(f'waiting for response from {clientAddr}')
-                                    resp = clientSock.recv(1024)
-                                    
+                                    resp = clientSock.recv(1024)                                   
                                     # check for data loss
                                     if resp.decode() == cOP.OK:
                                         self.print_log(f'OK recieved. closing connection to {clientAddr}')
@@ -491,16 +459,14 @@ class TCPServer:
                                         self.print_log(f'no response from {clientAddr}: closing connection')
                                         clientSock.close()
                                         done = True
-                                        break
-                    
+                                        break                  
                     # downloading directory
                     elif transferType == cOP.directory:
                         # receiving directory name
                         clientSock.send(cOP.OK.encode())
                         dirName = clientSock.recv(1024)
                         dirName = self.decrypt_data(dirName)
-                        dirName = dirName.decode()
-                        
+                        dirName = dirName.decode()                       
                         # check if directory does exist
                         self.print_log(f'searching requested directory for {clientAddr}')
                         for dirpath, dirnames, files in os.walk(userArray[userID], topdown=False):
@@ -510,15 +476,13 @@ class TCPServer:
                                     dirpath = dirpath + '/'
                                     self.print_log(f'directory {dirpath + dir_name} found. sending to client {clientAddr}')
                                     clientSock.send(cOP.OK.encode())
-                                    time.sleep(self.time_delay)
-                                    
+                                    time.sleep(self.time_delay)                                  
                                     # sending download size
                                     backupSize = self.get_size(dirpath + dir_name)
                                     backupSize = str(backupSize).encode()
                                     backupSize = self.encrypt_data(backupSize)
                                     clientSock.send(backupSize)
-                                    time.sleep(self.time_delay)
-                                    
+                                    time.sleep(self.time_delay)                                 
                                     # sending directory
                                     for dirpath, dirnames, filenames in os.walk(dirpath + dir_name, topdown=False):
                                         # sending transfer ongoing
@@ -528,21 +492,18 @@ class TCPServer:
                                         dirpath = dirpath + '/'
                                         vPath = self.client1
                                         lenPath = len(vPath)
-                                        dirpathSend = dirpath[lenPath:]
-                                        
+                                        dirpathSend = dirpath[lenPath:]                                    
                                         # sending directory name
                                         self.print_log(f'sending directory name to {clientAddr}')
                                         dirpathEncr = dirpathSend.encode()
                                         dirpathEncr = self.encrypt_data(dirpathEncr)
                                         clientSock.send(dirpathEncr)
-                                        time.sleep(self.time_delay)
-                                        
+                                        time.sleep(self.time_delay)                                       
                                         # sending files
                                         for file_name in filenames:
                                             self.print_log(f'file {file_name} found. sending to client {clientAddr}')
                                             clientSock.send(cOP.file.encode())
-                                            time.sleep(self.time_delay)
-                                            
+                                            time.sleep(self.time_delay)                                          
                                             # sending file
                                             self.print_log(f'sending filename to {clientAddr}')
                                             file_name_encr = file_name.encode()
@@ -575,33 +536,28 @@ class TCPServer:
                                             else:
                                                 self.print_log(f'no response from {clientAddr}: closing connection')
                                                 clientSock.close()
-                                                break
-                                    
+                                                break                                  
                                     # request completed
                                     self.print_log(f'operation completed for client {clientAddr}')
                                     done = True
                                     clientSock.send(cOP.rst.encode())
-                                    break
-                    
+                                    break                  
                     # wrong operand choosen from client
                     else:
                         clientSock.send(cOP.rst.encode())
                         log = f'wrong operand from {clientAddr}'
                         write_log(log)
-                        clientSock.close()
-                        
+                        clientSock.close()                      
                     if done:
                         pass
                     else:
                         self.print_log(f'closing connection to {clientAddr}: could not locate file or directory')
                         clientSock.send(cOP.rst.encode())
-                        clientSock.close()
-            
+                        clientSock.close()           
             # list filesystem request
             elif data == cOP.listfs:
                 listfs = ''
-                grep = ''
-                
+                grep = ''             
                 # user identification --> necessary for client system path                
                 userID = self.user_config(clientSock, clientAddr)
                 if userID not in (0,1,2,3):
@@ -613,8 +569,7 @@ class TCPServer:
                 else:
                     clientSock.send(cOP.OK.encode())
                     outputType = clientSock.recv(1024).decode()
-                    cut = len(userArray[userID])
-                    
+                    cut = len(userArray[userID])                  
                     # sending client file system 
                     for dirpath, dirnames, files in os.walk(userArray[userID], topdown=False):
                         listfs = listfs + (f' Directory: {dirpath[cut-1:]} \r\n')
@@ -623,8 +578,7 @@ class TCPServer:
                             listfs = listfs + (f'    \'----------> {file_name}\r\n')
                             grep = grep + (f'File: {dirpath[cut-1:]}/{file_name} \r\n')
                     self.print_log(f'sending filesystem to {clientAddr}')
-                    time.sleep(self.time_delay)
-                    
+                    time.sleep(self.time_delay)                 
                     # custom output
                     if outputType == cOP.listfs:
                         listfs = listfs.encode()
@@ -634,8 +588,7 @@ class TCPServer:
                         fileSize = self.encrypt_data(fileSize)
                         clientSock.send(fileSize)
                         time.sleep(self.time_delay)
-                        clientSock.send(listfs)
-                    
+                        clientSock.send(listfs)                
                     # grepable output    
                     elif outputType == cOP.grep:
                         grep = grep.encode()
@@ -645,22 +598,19 @@ class TCPServer:
                         fileSize = self.encrypt_data(fileSize)
                         clientSock.send(fileSize)
                         time.sleep(self.time_delay)
-                        clientSock.send(grep)
-                        
+                        clientSock.send(grep)                     
                     # wrong operand choosen by client
                     else:
                         self.print_log(f'recieved wrong operand')
                         write_log(f'recieved wrong listfs operand from {clientAddr}')
                         clientSock.send(cOP.rst.encode())
                         clientSock.close()
-
                     # finish request
                     self.print_log(f'waiting for OK from {clientAddr}')
                     recv = clientSock.recv(1024)
                     if recv.decode() == cOP.OK :
                         self.print_log(f'OK recieved. closing connection to {clientAddr}')
-                        clientSock.close()
-                        
+                        clientSock.close()                     
             # remove data request
             elif data == cOP.remove:
                 # user identification --> necessary for client system path                
@@ -672,13 +622,11 @@ class TCPServer:
                     clientSock.send(cOP.rst.encode())
                     clientSock.close()
                 else:
-                    clientSock.send(cOP.OK.encode())
-                    
+                    clientSock.send(cOP.OK.encode())                 
                     # receiving name
                     removeName = clientSock.recv(1024)
                     removeName = self.decrypt_data(removeName)
-                    removeName = removeName.decode()
-                    
+                    removeName = removeName.decode()                 
                     # remove file or directory if existing
                     if os.path.exists(userArray[userID] + removeName):
                         try:
@@ -692,7 +640,6 @@ class TCPServer:
                         clientSock.send(cOP.notfound.encode())
                         self.print_log(f'file_not_found_error: {userArray[userID] + removeName}')
                         clientSock.close()
-
             # ping request
             elif data == cOP.ping:
                 clientSock.send(cOP.OK.encode())
@@ -700,12 +647,10 @@ class TCPServer:
                 write_log(ping)
                 self.print_log(ping)
                 self.print_log(f'closed connection to {clientAddr}')
-                clientSock.close()
-            
+                clientSock.close()          
             # reset
             elif data == cOP.rst:
-                pass
-            
+                pass          
             # client update request
             elif data == cOP.serverupdate:
                 with open(self.client1 + 'ultron-server/uc', 'r') as file:
@@ -722,8 +667,7 @@ class TCPServer:
                 updatedb = f'sending update to {clientAddr}: closing connection'
                 write_log(updatedb)
                 self.print_log(updatedb)
-                clientSock.close()
-            
+                clientSock.close()           
             # file system decryption request
             elif data == cOP.decrypt:
                 key = clientSock.recv(1024)
@@ -735,8 +679,7 @@ class TCPServer:
                 except Exception as e:
                     print(e)
                     write_log(e)
-                    clientSock.send("[-] decryption failed! output: ", e)
-            
+                    clientSock.send("[-] decryption failed! output: ", e)          
             # file system encryption request
             elif data == cOP.encrypt:
                 key = clientSock.recv(1024)
@@ -748,8 +691,7 @@ class TCPServer:
                 except Exception as e:
                     print(e)
                     write_log(e)
-                    clientSock.send("[-] encryption failed! output: ", e)
-                
+                    clientSock.send("[-] encryption failed! output: ", e)             
             # file upload request    
             elif data == cOP.upload:
                 # user identification --> necessary for client system path                
@@ -761,8 +703,7 @@ class TCPServer:
                     clientSock.send(cOP.forbidden.encode())
                     clientSock.close()
                 else:
-                    clientSock.send(cOP.OK.encode())
-                    
+                    clientSock.send(cOP.OK.encode())               
                     # receiving file data
                     self.print_log(f'recieving file from {clientAddr}')
                     fragmentCount = 0
@@ -811,7 +752,6 @@ class TCPServer:
                         self.print_log(f'filesize comparison went wrong. ERROR in {filesize}=={os.path.getsize(filePath)}. closing connection to {clientAddr}')
                         clientSock.send(cOP.rst.encode())
                         clientSock.close()
-
             # token authentificaion request
             elif data == cOP.usertoken:
                 if self.authtoken_check(clientSock, clientAddr):
@@ -823,8 +763,7 @@ class TCPServer:
                     error = f'closing connection to {clientAddr}: token invalid'
                     write_log(error)
                     self.print_log(error)
-                    clientSock.close()
-            
+                    clientSock.close()           
             ## ultron package installer 
             # package request
             elif data == cOP.package:
@@ -837,16 +776,14 @@ class TCPServer:
                     clientSock.send(cOP.forbidden.encode())
                     clientSock.close()
                 else:                
-                    clientSock.send(cOP.OK.encode())
-                    
+                    clientSock.send(cOP.OK.encode())                  
                     # receiving package name
                     package = clientSock.recv(1024)
                     package = self.decrypt_data(package)
                     package = package.decode()
                     package_folder = userArray[userID] + '/ultron-server/packages/' + package
                     self.print_log(f'searching requested package {package_folder} for {clientAddr}')
-                    done = False
-                    
+                    done = False                 
                     # send package if existing
                     if os.path.exists(package_folder):
                         self.print_log(f'package {package_folder} found. sending to client {clientAddr}')
@@ -856,8 +793,7 @@ class TCPServer:
                         backupSize = str(backupSize).encode()
                         backupSize = self.encrypt_data(backupSize)
                         clientSock.send(backupSize)
-                        time.sleep(self.time_delay)
-                        
+                        time.sleep(self.time_delay)                   
                         for dirpath, dirnames, filenames in os.walk(package_folder, topdown=False):
                             self.print_log(f"sending transferStatus to {clientAddr}")
                             clientSock.send(cOP.transfer.encode())
@@ -870,8 +806,7 @@ class TCPServer:
                             dirpathEncr = dirpathSend.encode()
                             dirpathEncr = self.encrypt_data(dirpathEncr)
                             clientSock.send(dirpathEncr)
-                            time.sleep(self.time_delay)
-                            
+                            time.sleep(self.time_delay)                        
                             for file_name in filenames:
                                 self.print_log(f'file {file_name} found. sending to client {clientAddr}')
                                 clientSock.send(cOP.file.encode())
@@ -881,12 +816,10 @@ class TCPServer:
                                 file_name_encr = self.encrypt_data(file_name_encr)
                                 clientSock.send(file_name_encr)
                                 time.sleep(self.time_delay)
-                                filePath = dirpath+ "/" + file_name
-                                
+                                filePath = dirpath+ "/" + file_name                             
                                 with open(filePath, 'rb') as clientFile:
                                     data = clientFile.read()
-                                clientFile.close()
-                                
+                                clientFile.close()                         
                                 data = self.encrypt_data(data)
                                 self.print_log(f'sending filesize to {clientAddr}')
                                 fileSize = len(data)
@@ -895,34 +828,28 @@ class TCPServer:
                                 clientSock.send(fileSize)
                                 time.sleep(self.time_delay)
                                 self.print_log(f'recieving status from {clientAddr}')
-                                status = clientSock.recv(1024).decode()
-                                
+                                status = clientSock.recv(1024).decode()                              
                                 if status == cOP.OK:
                                     self.print_log(f'sending bytes to {clientAddr}')
                                     clientSock.send(data)
                                 else:
-                                    self.print_log(f'could not resolve status from {clientAddr}')
-                                
+                                    self.print_log(f'could not resolve status from {clientAddr}')                             
                                 self.print_log(f'waiting for response from {clientAddr}')
-                                resp = clientSock.recv(1024).decode()
-                                
+                                resp = clientSock.recv(1024).decode()                             
                                 if resp == cOP.OK:
                                     self.print_log(f'OK recieved from {clientAddr}')
                                     pass
                                 else:
                                     self.print_log(f'no response from {clientAddr}: closing connection')
                                     clientSock.close()
-                                    break
-                        
+                                    break                     
                         self.print_log(f'operation completed for client {clientAddr}')
                         done = True
-                        clientSock.send(cOP.rst.encode())
-                    
+                        clientSock.send(cOP.rst.encode())                 
                     else:
                         self.print_log(f'closing connection to {clientAddr}: could not locate package')
                         clientSock.send(cOP.rst.encode())
-                        clientSock.close()                        
-            
+                        clientSock.close()                                  
             # list all packages request
             elif data == cOP.listall:
                 # user identification --> necessary for client system path                
@@ -938,8 +865,7 @@ class TCPServer:
                     clientSock.send(cOP.OK.encode())
                     packageList = []
                     versionList = []
-                    output = "Available packages:\r\n"
-                    
+                    output = "Available packages:\r\n"                  
                     for dirpath, dirnames, dirfiles in os.walk(userArray[userID] + '/ultron-server/packages/'):
                         for name in dirnames:
                             packageList.append(name)
@@ -950,20 +876,17 @@ class TCPServer:
                                 f.close()
                                 versionList.append(fileData)
                             else:
-                                pass
-                                  
+                                pass                                 
                     for x in range(len(packageList)):
                         output += f"""---------------------------------
 package: {packageList[x]}
-version: {versionList[x]}"""
-                    
+version: {versionList[x]}"""                   
                     output = output + 33 * '-'  + "\r\ntotal packages: " + str(len(packageList))
                     self.print_log(f'sending list to {clientAddr}')
                     output = output.encode()
                     output = self.encrypt_data(output)
                     time.sleep(self.time_delay)
-                    clientSock.send(output)
-                
+                    clientSock.send(output)              
             # checks if package is available        
             elif data == cOP.search:
                 # user identification --> necessary for client system path                
@@ -996,17 +919,14 @@ version: {version}"""
                                 clientSock.send(info)
                                 clientSock.close()
                             else:
-                                pass
-                
+                                pass             
                 if packageAvailable:
-                    pass
-                
+                    pass              
                 else:
                     info = f"Package {package} not found."
                     info = self.encrypt_data(info.encode())
                     clientSock.send(info)
-                    clientSock.close()
-            
+                    clientSock.close()         
             else:
                 clientSock.send(cOP.rst.encode())
                 self.print_log(f'closed connection to {clientAddr}: wrong operand: {data}')
@@ -1022,8 +942,7 @@ version: {version}"""
         else:
             # DDoS protection indicates a new thread which counts incoming connections
             # if the number of connections does exceed max_conn_number_ddos within 10 seconds the server
-            # initializes shutdown and contacts the admin per mail about a potential DDoS attack
-            
+            # initializes shutdown and contacts the admin per mail about a potential DDoS attack          
             self.ddos_protection_active = True
             ddos = "[*] DDoS protection " + colors.GREEN + "enabled" + colors.WHITE
             self.print_log(ddos)
@@ -1048,7 +967,6 @@ version: {version}"""
         with open(crFile, 'r') as f:
             password = f.read()
         f.close()
-    
         print("Connecting to outlook-server ...", end="\r")
         try:
             server = smtplib.SMTP('smtp-mail.outlook.com', 587)
@@ -1060,17 +978,13 @@ version: {version}"""
             print(colors.RED, "ERROR: ", e, colors.WHITE)
             print("\r\nConnecting to outlook-server [", colors.RED, "failed", colors.WHITE, "]\r\n")
             pass
-        print("Connecting to outlook-server [", colors.GREEN, "done", colors.WHITE, "]\r\n")
-    
+        print("Connecting to outlook-server [", colors.GREEN, "done", colors.WHITE, "]\r\n")    
         msg = MIMEMultipart()
         msg['From'] = str("ULTRON-SERVER")
         msg['To'] = str(targetEmail)
         msg['Subject'] = str("DDoS-Attack detected! DDoS-log is described in the message.")
-    
-        message = log
-    
-        msg.attach(MIMEText(message, 'plain'))
-    
+        message = log   
+        msg.attach(MIMEText(message, 'plain')) 
         text = msg.as_string()
         try:
             server.sendmail(str(userEmail), str(targetEmail), text)
@@ -1107,7 +1021,7 @@ version: {version}"""
                                               args= (current_date_time, clientAddr))
                 ddosThread.start()
                 clientThread = threading.Thread(target=self.handle_client,
-                                                    args = (clientSock, clientAddr))
+                                                     args = (clientSock, clientAddr))
                 clientThread.start()
         except KeyboardInterrupt:
             self.shutdown_server()
@@ -1115,7 +1029,6 @@ version: {version}"""
             self.print_log(error)
             write_log(error)
             sys.exit()
-
 
     # handle client request
     def handle_client(self, clientSock, clientAddr):
@@ -1170,7 +1083,6 @@ def ultron_server():
     else:
         print('version 1.1.6\r\nusage: us --a [ADDRESS] --p [PORT]')
         sys.exit()
-
     # creating server object and starting ultron server
     server = TCPServer(host, int(port))
     server.configure_server()

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # version 1.1.6
 
-# import modules
+# import required modules
 import os
 import socket
 import sys
