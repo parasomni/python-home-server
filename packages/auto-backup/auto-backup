@@ -9,9 +9,6 @@ import filecmp
 
 from tqdm import tqdm
 
-
-#backup_path = '/media/pi/Volume/ultron_server/upload/client1'
-#blackbox = '/media/pi/BLACKBOX/ultron-server'
 print_path = '/tmp/print.tmp'
 list_path = '/tmp/list.tmp'
 
