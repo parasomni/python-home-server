@@ -1,8 +1,5 @@
 #!/usr/bin/python3
-# version 1.1.6
-
-# upcomming improvements:
-# file checker » if file is already downloaded only new files will be downloaded
+# version 1.1.7
 
 # import required modules
 import socket
@@ -106,7 +103,8 @@ def server_main_log(log):
     with open(server_main_log_path + date + '.txt', 'a') as log_file:
         log_file.write(str(log) + '\r\n')
     log_file.close()
-    
+
+server_version = 'v1.1.7'
 
 # server implementation
 class TCPServer:
@@ -1187,7 +1185,7 @@ version: {version}"""
 
     # initialize server
     def configure_server(self):
-        log = 'ultron-server version 1.1.6'
+        log = f'ultron-server version {server_version}'
         server_main_log(log)
         self.print_log(log)
         log = 'starting server...'
@@ -1279,10 +1277,10 @@ def ultron_server():
         if sys.argv[3] == "--p":
             port = sys.argv[4]
         else:
-            print('version 1.1.6\r\nusage: us --a [ADDRESS] --p [PORT]')
+            print(f'version {server_version}\r\nusage: us --a [ADDRESS] --p [PORT]')
             sys.exit()
     else:
-        print('version 1.1.6\r\nusage: us --a [ADDRESS] --p [PORT]')
+        print(f'version {server_version}\r\nusage: us --a [ADDRESS] --p [PORT]')
         sys.exit()
     # creating server object and starting ultron server
     server = TCPServer(host, int(port))

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# version 1.1.6
+# version 1.1.7
 
 # import required modules
 import os
@@ -52,8 +52,9 @@ class cOP:
     encrypt = "000"
     decrpyt = "999"
     search = "876"
-    
-    
+
+client_version = 'v1.1.7'
+
 # client implementation
 class TCPClient:
 
@@ -1269,8 +1270,8 @@ class TCPClient:
 
 # help menu
 def help_menu():
-        print("""ultron client
-version 1.1.6
+        print(f"""ultron client
+version {client_version}
     uc server instructions: 
 usage: uc <operands> [INPUT]  
     --auth [TOKENFILE]      # verify token validity
