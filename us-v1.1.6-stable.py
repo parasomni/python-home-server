@@ -177,6 +177,12 @@ class TCPServer:
             self.print_log(f'Directory {dirPath} not exists --> creating...')
             os.makedirs(dirPath)
 
+    def check_dir_sec(self, dir):
+        if '..' in dir:
+            return False
+        else:
+            return True
+
     # returns size of directory
     def get_size(self, dir1):
         total_size = 0
@@ -361,103 +367,108 @@ class TCPServer:
                     destDir = clientSock.recv(1024)
                     destDir = self.decrypt_data(destDir)
                     destDir = destDir.decode()
-                    isDir = False                  
-                    # recieving backupsize
-                    log = f'recieving backup-size from {clientAddr}'
-                    server_log(userArray[userID], log) 
-                    self.print_log(log)
-                    backupSize = clientSock.recv(2048)
-                    backupSize = self.decrypt_data(backupSize)
-                    backupSize = backupSize.decode()
-                    log = f'recieving directory name from {clientAddr}'
-                    server_log(userArray[userID], log) 
-                    self.print_log(log)                 
-                    # getting dirSizeBefore
-                    first_dir_name = clientSock.recv(2048)
-                    first_dir_name = self.decrypt_data(first_dir_name)
-                    first_dir_name = first_dir_name.decode()
-                    self.check_dir(userArray[userID] + destDir)
-                    dirSizeBefore = self.get_size(userArray[userID] + destDir + first_dir_name)                                     
-                    # recieving backup
-                    while fileTransfer:
-                        # recieving fileTransfer status
-                        if not isDir:
-                            log = f'recieving fileTransferStatus from {clientAddr}'
-                            server_log(userArray[userID], log) 
-                            self.print_log(log)
-                            status = clientSock.recv(1024)
-                            status = status.decode()
-                        else:
-                            pass
-                        global dirName                     
-                        # backup ongoing
-                        if status == cOP.backup:
-                            log = f'recieving fileDirectoryName from {clientAddr}'
-                            server_log(userArray[userID], log)                             
-                            self.print_log(log)                         
-                            # recieving directory name
-                            dirName = clientSock.recv(1024)
-                            dirName = self.decrypt_data(dirName)
-                            dirName = dirName.decode()                         
-                            # checking Directory
-                            log = f'recieving fileRequestOperand from {clientAddr}'
-                            self.check_dir(userArray[userID] + destDir + dirName)
-                            server_log(userArray[userID], log) 
-                            self.print_log(log)
-                            req = clientSock.recv(1024)
-                            req = req.decode()
-                            if req == cOP.file:
-                                isDir = False
+                    if not self.check_dir_sec(destDir):
+                        log = f"WARNING: Detected potential security threat! {clientAddr}"
+                        server_main_log(log)
+                        clientSock.close()
+                    else:
+                        isDir = False                  
+                        # recieving backupsize
+                        log = f'recieving backup-size from {clientAddr}'
+                        server_log(userArray[userID], log) 
+                        self.print_log(log)
+                        backupSize = clientSock.recv(2048)
+                        backupSize = self.decrypt_data(backupSize)
+                        backupSize = backupSize.decode()
+                        log = f'recieving directory name from {clientAddr}'
+                        server_log(userArray[userID], log) 
+                        self.print_log(log)                 
+                        # getting dirSizeBefore
+                        first_dir_name = clientSock.recv(2048)
+                        first_dir_name = self.decrypt_data(first_dir_name)
+                        first_dir_name = first_dir_name.decode()
+                        self.check_dir(userArray[userID] + destDir)
+                        dirSizeBefore = self.get_size(userArray[userID] + destDir + first_dir_name)                                     
+                        # recieving backup
+                        while fileTransfer:
+                            # recieving fileTransfer status
+                            if not isDir:
+                                log = f'recieving fileTransferStatus from {clientAddr}'
+                                server_log(userArray[userID], log) 
+                                self.print_log(log)
+                                status = clientSock.recv(1024)
+                                status = status.decode()
+                            else:
+                                pass
+                            global dirName                     
+                            # backup ongoing
+                            if status == cOP.backup:
+                                log = f'recieving fileDirectoryName from {clientAddr}'
+                                server_log(userArray[userID], log)                             
+                                self.print_log(log)                         
+                                # recieving directory name
+                                dirName = clientSock.recv(1024)
+                                dirName = self.decrypt_data(dirName)
+                                dirName = dirName.decode()                         
+                                # checking Directory
+                                log = f'recieving fileRequestOperand from {clientAddr}'
+                                self.check_dir(userArray[userID] + destDir + dirName)
+                                server_log(userArray[userID], log) 
+                                self.print_log(log)
+                                req = clientSock.recv(1024)
+                                req = req.decode()
+                                if req == cOP.file:
+                                    isDir = False
+                                    self.handle_file(clientSock, clientAddr, userArray[userID] + destDir + dirName)
+                                elif req == cOP.backup:
+                                    log = f'recieved fileTransferStatus from {clientAddr}'
+                                    server_log(userArray[userID], log) 
+                                    self.print_log(log)
+                                    isDir = True
+                                else:
+                                    server_log(userArray[userID], req) 
+                                    self.print_log(req)                              
+                            # backup ongoing -> receiving file        
+                            elif status == cOP.file:
                                 self.handle_file(clientSock, clientAddr, userArray[userID] + destDir + dirName)
-                            elif req == cOP.backup:
-                                log = f'recieved fileTransferStatus from {clientAddr}'
+                            # backup complete    
+                            elif status == cOP.OK:
+                                userDir = userArray[userID] + destDir + dirName
+                                currSize = self.get_size(userDir)                           
+                                # check that there was no data loss
+                                if currSize == dirSizeBefore:
+                                    actSize = backupSize
+                                else:
+                                    actSize = currSize - dirSizeBefore
+                                log = f'checking directories {userDir} and {destDir}'
                                 server_log(userArray[userID], log) 
                                 self.print_log(log)
-                                isDir = True
+                                log = f'recieved status OK from {clientAddr}: recieving bytes {actSize}/{backupSize}'
+                                server_log(userArray[userID], log) 
+                                self.print_log(log)                           
+                                if int(backupSize) == int(actSize):
+                                    # transfer finished
+                                    fileTransfer = False
+                                    log = f'file transfer finished from {clientAddr}'
+                                    server_log(userArray[userID], log) 
+                                    self.print_log(log)
+                                    clientSock.send(cOP.OK.encode())
+                                    clientSock.close()
+                                else:
+                                    # transfer incomplete
+                                    fileTransfer = False
+                                    message = f'server_side_error: endCheck failed. try backup again.'
+                                    clientSock.send(message.encode())
+                                    log = f'server_side_error: close connection to {clientAddr}'                                
+                                    server_log(userArray[userID], log) 
+                                    self.print_log(log)
+                                    clientSock.close()
                             else:
-                                server_log(userArray[userID], req) 
-                                self.print_log(req)                              
-                        # backup ongoing -> receiving file        
-                        elif status == cOP.file:
-                            self.handle_file(clientSock, clientAddr, userArray[userID] + destDir + dirName)
-                        # backup complete    
-                        elif status == cOP.OK:
-                            userDir = userArray[userID] + destDir + dirName
-                            currSize = self.get_size(userDir)                           
-                            # check that there was no data loss
-                            if currSize == dirSizeBefore:
-                                actSize = backupSize
-                            else:
-                                actSize = currSize - dirSizeBefore
-                            log = f'checking directories {userDir} and {destDir}'
-                            server_log(userArray[userID], log) 
-                            self.print_log(log)
-                            log = f'recieved status OK from {clientAddr}: recieving bytes {actSize}/{backupSize}'
-                            server_log(userArray[userID], log) 
-                            self.print_log(log)                           
-                            if int(backupSize) == int(actSize):
-                                # transfer finished
+                                log = f'closing connection to {clientAddr}: closed by cient'
+                                server_log(userArray[userID], log) 
+                                self.print_log(log)
                                 fileTransfer = False
-                                log = f'file transfer finished from {clientAddr}'
-                                server_log(userArray[userID], log) 
-                                self.print_log(log)
-                                clientSock.send(cOP.OK.encode())
-                                clientSock.close()
-                            else:
-                                # transfer incomplete
-                                fileTransfer = False
-                                message = f'server_side_error: endCheck failed. try backup again.'
-                                clientSock.send(message.encode())
-                                log = f'server_side_error: close connection to {clientAddr}'                                
-                                server_log(userArray[userID], log) 
-                                self.print_log(log)
-                                clientSock.close()
-                        else:
-                            log = f'closing connection to {clientAddr}: closed by cient'
-                            server_log(userArray[userID], log) 
-                            self.print_log(log)
-                            fileTransfer = False
-                            clientSock.close()           
+                                clientSock.close()           
             # download request                
             elif data == cOP.download:
                 done = False              
@@ -727,29 +738,37 @@ class TCPServer:
                     # receiving name
                     removeName = clientSock.recv(1024)
                     removeName = self.decrypt_data(removeName)
-                    removeName = removeName.decode()                 
-                    # remove file or directory if existing
-                    if os.path.exists(userArray[userID] + removeName):
-                        try:
-                            os.remove(userArray[userID] + removeName)
-                        except OSError:
-                            shutil.rmtree(userArray[userID] + removeName)
-                        log = f'removed {userArray[userID] + removeName}'
-                        server_log(userArray[userID], log)                                                 
-                        self.print_log(log)
-                        clientSock.send(cOP.OK.encode())
+                    removeName = removeName.decode()
+                    # check for potential threat
+                    if not self.check_dir_sec(removeName):
+                        log = f"WARNING: Detected potential security threat! {clientAddr}"
+                        server_main_log(log)
+                        log = f"WARNING: Attacker {clientAddr} tried to remove {removeName}"
+                        server_main_log(log)
                         clientSock.close()
                     else:
-                        clientSock.send(cOP.notfound.encode())
-                        log = f'file_not_found_error: {userArray[userID] + removeName}'
-                        server_log(userArray[userID], log)                                                                         
-                        self.print_log(log)
-                        clientSock.close()
+                        # remove file or directory if existing
+                        if os.path.exists(userArray[userID] + removeName):
+                            try:
+                                os.remove(userArray[userID] + removeName)
+                            except OSError:
+                                shutil.rmtree(userArray[userID] + removeName)
+                            log = f'removed {userArray[userID] + removeName}'
+                            server_log(userArray[userID], log)                                                 
+                            self.print_log(log)
+                            clientSock.send(cOP.OK.encode())
+                            clientSock.close()
+                        else:
+                            clientSock.send(cOP.notfound.encode())
+                            log = f'file_not_found_error: {userArray[userID] + removeName}'
+                            server_log(userArray[userID], log)                                                                         
+                            self.print_log(log)
+                            clientSock.close()
             # ping request
             elif data == cOP.ping:
                 clientSock.send(cOP.OK.encode())
                 ping = f'sending ping request to {clientAddr}'
-                write_log(ping)
+                server_main_log(ping)
                 self.print_log(ping)
                 self.print_log(f'closed connection to {clientAddr}')
                 clientSock.close()          
@@ -770,7 +789,7 @@ class TCPServer:
                 time.sleep(self.time_delay)
                 clientSock.send(data)
                 updatedb = f'sending update to {clientAddr}: closing connection'
-                write_log(updatedb)
+                server_main_log(updatedb)
                 self.print_log(updatedb)
                 clientSock.close()           
             # file system decryption request
@@ -784,7 +803,7 @@ class TCPServer:
                 except Exception as e:
                     print(e)
                     write_log(e)
-                    clientSock.send("[-] decryption failed! output: ", e)          
+                    clientSock.send("[-] decryption failed! output: ", e)         
             # file system encryption request
             elif data == cOP.encrypt:
                 key = clientSock.recv(1024)
@@ -796,7 +815,7 @@ class TCPServer:
                 except Exception as e:
                     print(e)
                     write_log(e)
-                    clientSock.send("[-] encryption failed! output: ", e)             
+                    clientSock.send("[-] encryption failed! output: ", e)           
             # file upload request    
             elif data == cOP.upload:
                 # user identification --> necessary for client system path                
@@ -817,60 +836,65 @@ class TCPServer:
                     fileDir = clientSock.recv(1024)
                     fileDir = self.decrypt_data(fileDir)
                     fileDir = fileDir.decode()
-                    checkDir = self.fetch_dir(fileDir)
-                    if checkDir == 'not available':
-                        pass
+                    if not self.check_dir_sec(fileDir):
+                        log = f"WARNING: Detected potential security threat! {clientAddr}"
+                        server_main_log(log)
+                        clientSock.close()
                     else:
-                        self.check_dir(userArray[userID] + checkDir)
-                    log = f'recieved filedirectory from {clientAddr}'
-                    server_log(userArray[userID], log)                                                                                             
-                    self.print_log(log)
-                    fileData = ''
-                    time.sleep(self.time_delay)
-                    filesize = clientSock.recv(1024)
-                    filesize = self.decrypt_data(filesize)
-                    filesize = filesize.decode()
-                    filesize = int(filesize)
-                    log = f'recieved filesize from {clientAddr}'
-                    server_log(userArray[userID], log)                                                                         
-                    self.print_log(log)
-                    recieved = False
-                    if filesize > 1448:
-                        fragmentCount = filesize / 1448
-                        fragmentCount += 2
-                    else:
-                        fragmentCount = 1
-                    for i in range(int(fragmentCount)):
-                        fileBytes = clientSock.recv(1500)
-                        fileBytes = fileBytes.decode()
-                        fileData += fileBytes
-                        log = f'recieving bytes: {len(fileData)}/{filesize}'
+                        checkDir = self.fetch_dir(fileDir)
+                        if checkDir == 'not available':
+                            pass
+                        else:
+                            self.check_dir(userArray[userID] + checkDir)
+                        log = f'recieved filedirectory from {clientAddr}'
+                        server_log(userArray[userID], log)                                                                                             
+                        self.print_log(log)
+                        fileData = ''
+                        time.sleep(self.time_delay)
+                        filesize = clientSock.recv(1024)
+                        filesize = self.decrypt_data(filesize)
+                        filesize = filesize.decode()
+                        filesize = int(filesize)
+                        log = f'recieved filesize from {clientAddr}'
                         server_log(userArray[userID], log)                                                                         
                         self.print_log(log)
-                        if filesize == len(fileData):
-                            log = f'recieved bytes successfully from {clientAddr}'
+                        recieved = False
+                        if filesize > 1448:
+                            fragmentCount = filesize / 1448
+                            fragmentCount += 2
+                        else:
+                            fragmentCount = 1
+                        for i in range(int(fragmentCount)):
+                            fileBytes = clientSock.recv(1500)
+                            fileBytes = fileBytes.decode()
+                            fileData += fileBytes
+                            log = f'recieving bytes: {len(fileData)}/{filesize}'
                             server_log(userArray[userID], log)                                                                         
                             self.print_log(log)
-                            recieved = True
-                            break
-                    fileData = fileData.encode()
-                    fileData = self.decrypt_data(fileData)
-                    filePath = userArray[userID] + fileDir
-                    with open(filePath, 'wb') as openFile:
-                        openFile.write(fileData)
-                    openFile.close()
-                    if recieved:
-                        log = f'file from {clientAddr} written to  {filePath}'
-                        server_log(userArray[userID], log)                                                                         
-                        self.print_log(log)
-                        clientSock.send(cOP.OK.encode())
-                        clientSock.close()
-                    else:
-                        log = f'filesize comparison went wrong. ERROR in {filesize}=={os.path.getsize(filePath)}. closing connection to {clientAddr}'
-                        server_log(userArray[userID], log)                                                                         
-                        self.print_log(log)
-                        clientSock.send(cOP.rst.encode())
-                        clientSock.close()
+                            if filesize == len(fileData):
+                                log = f'recieved bytes successfully from {clientAddr}'
+                                server_log(userArray[userID], log)                                                                         
+                                self.print_log(log)
+                                recieved = True
+                                break
+                        fileData = fileData.encode()
+                        fileData = self.decrypt_data(fileData)
+                        filePath = userArray[userID] + fileDir
+                        with open(filePath, 'wb') as openFile:
+                            openFile.write(fileData)
+                        openFile.close()
+                        if recieved:
+                            log = f'file from {clientAddr} written to  {filePath}'
+                            server_log(userArray[userID], log)                                                                         
+                            self.print_log(log)
+                            clientSock.send(cOP.OK.encode())
+                            clientSock.close()
+                        else:
+                            log = f'filesize comparison went wrong. ERROR in {filesize}=={os.path.getsize(filePath)}. closing connection to {clientAddr}'
+                            server_log(userArray[userID], log)                                                                         
+                            self.print_log(log)
+                            clientSock.send(cOP.rst.encode())
+                            clientSock.close()
             # token authentificaion request
             elif data == cOP.usertoken:
                 if self.authtoken_check(clientSock, clientAddr):
@@ -1044,7 +1068,7 @@ version: {versionList[x]}"""
                 userID = self.user_config(clientSock, clientAddr)
                 if userID not in (0,1,2,3):
                     error = f'closing connection to {clientAddr}: invalid auth_token'
-                    write_log(error)
+                    server_log(userArray[userID], error)
                     self.print_log(error)
                     clientSock.send(cOP.forbidden.encode())
                     clientSock.close()
