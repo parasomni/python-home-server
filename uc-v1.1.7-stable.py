@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-# version 1.1.6
+# version 1.1.7
 
-# import modules
+# import required modules
 import os
 import socket
 import sys
@@ -52,8 +52,9 @@ class cOP:
     encrypt = "000"
     decrpyt = "999"
     search = "876"
-    
-    
+
+client_version = 'v1.1.7'
+
 # client implementation
 class TCPClient:
 
@@ -1269,8 +1270,8 @@ class TCPClient:
 
 # help menu
 def help_menu():
-        print("""ultron client
-version 1.1.6
+        print(f"""ultron client
+version {client_version}
     uc server instructions: 
 usage: uc <operands> [INPUT]  
     --auth [TOKENFILE]      # verify token validity
@@ -1282,7 +1283,6 @@ usage: uc <operands> [INPUT]
     --listfs --o [FILE]     # list complete filesystem    
     --p                     # ping request 
     --r [FILE/DIR]          # remove script
-    --sync                  # synchronise all data 
     --u [DEST_PATH, FILE]   # upload selected file
     --c                     # encrypt/decrypt server data
     
@@ -1293,7 +1293,6 @@ usage: uc <operand> [PACKAGE]
     update   # update a selected package
     search   # check if the package is available
     list-all # list all available packages
-    sync     # synchronise all packages 
             """)
 
 
@@ -1308,7 +1307,7 @@ def check_dir(dirPath):
 
 # opperand is not supported
 def operand_unsupported():
-    print('Sorry. This feature is still in development and currently unavailable.')
+    print('This feature is still under development and currently unavailable.')
     sys.exit()
 
 
@@ -1321,8 +1320,8 @@ def recieve_token(tokenfile):
 
 # list for available options
 opList = [
-    "-h", "--h", "-help", "--sync", "--h","--r","--d", "--p", "--b", "--u", "--updateuc", "--auth", "--listfs",
-    '--updateuc-devops','install', 'remove', 'search', 'update', 'list-all', 'sync', "--c"
+    "-h", "--h", "-help", "--h","--r","--d", "--p", "--b", "--u", "--updateuc", "--auth", "--listfs",
+    '--updateuc-devops','install', 'remove', 'search', 'update', 'list-all', "--c"
 ]
 
 
