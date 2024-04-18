@@ -87,9 +87,9 @@ def write_ddos_log(log):
 # log client actions
 def server_log(client, log):
     date = datetime.now().strftime('%Y%m%d')
-    client_server_path = '/etc/ultron-server/' + client.split('/')[-1];
+    client_server_path = '/etc/ultron-server/' + client.split('/')[-1]
     check_dir(client_server_path) 
-    with open(client_server_path + date + '.txt', 'a') as log_file:
+    with open(client_server_path + '/' + date + '.txt', 'a') as log_file:
         log_file.write(str(log)+ '\r\n')
     log_file.close()
 
