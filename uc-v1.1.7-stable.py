@@ -1275,23 +1275,23 @@ version {client_version}
     uc server instructions: 
 usage: uc <operands> [INPUT]  
     --auth [TOKENFILE]      # verify token validity
-    --b [SRC_DIR, DST_DIR]  # backup script 
+    --b [SRC_DIR, DST_DIR]  # backup directory to destination 
     --updateuc              # update client to latest version
     --updateuc-devops       # only for developer
-    --d -f [FILE]           # download selected file
-    --d -r [DIR]            # download selected directory
+    --d -f [FILE]           # download requested file
+    --d -r [DIR]            # download requested directory
     --listfs --o [FILE]     # list complete filesystem    
     --p                     # ping request 
-    --r [FILE/DIR]          # remove script
+    --r [FILE/DIR]          # remove file or directory from server
     --u [DEST_PATH, FILE]   # upload selected file
-    --c                     # encrypt/decrypt server data
+    --c                     # encrypt/decrypt stored client data
     
     uc package installer:
 usage: uc <operand> [PACKAGE]
-    install  # install a package 
-    remove   # remove a package from the host system
-    update   # update a selected package
-    search   # check if the package is available
+    install  # install requested package 
+    remove   # remove package from host system
+    update   # update selected package
+    search   # check if requested package is available
     list-all # list all available packages
             """)
 
