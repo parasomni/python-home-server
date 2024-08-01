@@ -1,4 +1,4 @@
-![ultron server](logo/ultron-server.png)
+   ![ultron server](logo/ultron-server.png)
 
 # python-home-server » a simple command line home server
 
@@ -10,50 +10,54 @@ This python-home-server called "ultron-server" is a simple command line server. 
 
 At first fetch the files from the python-home-server repository:
 
-`git clone https://github.com/rysecx/python-home-server && cd python-home-server`
+    git clone https://github.com/rysecx/python-home-server && cd python-home-server
 
 
 ## 2. Server setup
 
  To setup the server on a device run the following code:
 
- `sudo python3 installation-wizard.py`
+    sudo python3 installation-wizard.py
 
   The program generates the private key for the encryption and a user token for authentification. The generated user token is added to the *valid-tokens.txt* file where all valid users are stored in.
 
   NOTE: The encryption key and user token have to be copied in the same directory where the installation-wizard is located! Otherwise the client setup will generate a new encryption key and user token.
 
-  You can now start the server: `sudo us --a address --p port`
+  You can now start the server:  
+  
+    sudo us --a [ADDRESS] --p [PORT]
 
   The server creates an *err_log.txt* file for errors occurred during runtime and a *conn_log.txt* file for logging incoming connections.
 
   You can run ultron-server as background daemon when using systemd by running the following instructions:
-  `sudo mv ultron.service /etc/systemd/system/ultron.service`
-  `sudo systemctl daemon-reload`
-  `sudo systemctl enable ultron.service`
-  `sudo systemctl start ultron.service`
+   
+    sudo mv ultron.service /etc/systemd/system/ultron.service
+    sudo systemctl daemon-reload
+    sudo systemctl enable ultron.service
+    sudo systemctl start ultron.service
 
   Ensure daemon is running:
-  `sudo systemctl status ultron.service`
+    
+    sudo systemctl status ultron.service
   
 
 ## 3. Client setup
 
 To setup the client on a device run the following code:
 
-`sudo python3 installation-wizard.py`
+    sudo python3 installation-wizard.py
 
    You can now run the command `uc -h` to see all available options. By running the script for the first time the programm will guide you through the server configuration.
 
    Run the following command to check if the authentification token is valid: 
    
-`uc --auth /etc/ultron-server/token.txt`
+    uc --auth /etc/ultron-server/token.txt
 
 ## 4. Additional security feature
 
 *usi.py* is an optional security script. It creates integrities of the files *key.txt*, *token.txt* and *valid-token.txt*. Therefore it can be excluded that these files have been compromised. You can use it by the following command:
 
-`sudo python3 usi.py`
+    sudo python3 usi.py
 
 ## 5. Ultron package manager
 
