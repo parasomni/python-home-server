@@ -1402,7 +1402,9 @@ def client_start():
     # config variables
     tokenfile = '/etc/ultron-server/token.txt'
     token = recieve_token(tokenfile)
-    configfile = '/etc/ultron-server/config.csv'
+    #configfile = '/etc/ultron-server/config.csv'
+    configfile = '/etc/ultron-server/debug.csv'
+
     
     # extract/create server configuration
     serverport = 0
