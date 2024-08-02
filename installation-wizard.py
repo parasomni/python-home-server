@@ -45,6 +45,7 @@ def token_gen():
 key_path = os.getcwd() + '/key.txt'
 token_path = os.getcwd() + '/token.txt'
 ultron_path = '/etc/ultron-server/'
+client_file = 'uc-v1.1.7-stable.py'
 valid_tokens = '/etc/ultron-server/valid-tokens.txt'
 token = '' 
 
@@ -151,7 +152,7 @@ def install_server():
             update_text(config)
             update_text('setting up triggers')
             try:
-                os.system('cp us-v1.1.6-stable.py /usr/bin/us')
+                os.system(f'mv {client_file} /usr/bin/us')
                 os.system('chmod +x /usr/bin/us')
                 update_text("successfully installed ultron-server!")
             except Exception as e:
@@ -308,7 +309,7 @@ def install_client():
             
         update_text('setting up triggers')
         try:
-            os.system('cp uc-v1.1.6-stable.py /usr/bin/uc')
+            os.system(f'mv {client_file} /usr/bin/uc')
             os.system('chmod +x /usr/bin/uc')
             update_text("successfully installed ultron-client!")
         except Exception as e:
