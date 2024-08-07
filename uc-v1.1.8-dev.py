@@ -154,42 +154,38 @@ class TCPClient:
         return key, iv
 
     def encrypt_data(self, plaintext):
-        print(f"[DEBUG] Plaintext before encryption: {plaintext}")
+        #print(f"[DEBUG] Plaintext before encryption: {plaintext}")
         cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
         padder = padding.PKCS7(algorithms.AES.block_size).padder()
         padded_plaintext = padder.update(plaintext.encode('utf-8')) + padder.finalize()
-        print(f"[DEBUG] Padded plaintext: {padded_plaintext}")
+        #print(f"[DEBUG] Padded plaintext: {padded_plaintext}")
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
-        print(f"[DEBUG] Ciphertext: {ciphertext}")
+        #print(f"[DEBUG] Ciphertext: {ciphertext}")
         return ciphertext
 
     def decrypt_data(self, ciphertext):
-        print(f"[DEBUG] Ciphertext before decryption: {ciphertext}")
+        #print(f"[DEBUG] Ciphertext before decryption: {ciphertext}")
         cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
         decryptor = cipher.decryptor()
         padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-        print(f"[DEBUG] Padded plaintext after decryption: {padded_plaintext}")
+        #print(f"[DEBUG] Padded plaintext after decryption: {padded_plaintext}")
         unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
         plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-        print(f"[DEBUG] Plaintext after unpadding: {plaintext}")
+        #print(f"[DEBUG] Plaintext after unpadding: {plaintext}")
         return plaintext.decode('utf-8')
 
     def setup_encryption(self, conn):
-        print("setup encryption")
-        print("receiving server key")
         server_public_bytes = conn.recv(1024)
         server_public_key = serialization.load_pem_public_key(
             server_public_bytes,
             backend=default_backend()
         )
-        print("generating client key")
         client_private_key, client_public_key = self.generate_ecdh_keys()
         client_public_bytes = client_public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
-        print("sending client key")
         conn.sendall(client_public_bytes)
         shared_secret = client_private_key.exchange(ec.ECDH(), server_public_key)
         derived_key = HKDF(
@@ -296,9 +292,9 @@ class TCPClient:
         self.key, self.iv = self.setup_encryption(self.clientSock)
 
         self.print_log(f'requesting ping from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.ping.encode())
+        self.clientSock.send(self.encrypt_data(cOP.ping))
         answ = self.clientSock.recv(1024)
-        ping = answ.decode()
+        ping = self.decrypt_data(answ)
         if ping == cOP.OK:
             self.print_log('server [' + colors.GREEN + 'online' + colors.WHITE + ']')
             self.clientSock.close()
@@ -313,16 +309,16 @@ class TCPClient:
 
         # requesting transfer
         self.print_log(f'requesting transfer from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.download.encode())
+        self.clientSock.send(self.encrypt_data(cOP.download))
         time.sleep(0.2)
         
         # authentication
         # sending client token
-        clientToken = clientToken.encode()
+        clientToken = clientToken 
         clientToken = self.encrypt_data(clientToken)
         self.clientSock.send(clientToken)
         resp = self.clientSock.recv(1024)
-        resp = resp.decode()
+        resp = self.decrypt_data(resp)
         
         # recieving message from server
         if resp == cOP.OK:
@@ -330,30 +326,30 @@ class TCPClient:
             # downloading file
             if downloadType == 0:
                 # sending file operand
-                self.clientSock.send(cOP.file.encode())
+                self.clientSock.send(self.encrypt_data(cOP.file))
                 answ = self.clientSock.recv(1024)
-                answ = answ.decode()
+                answ = self.decrypt_data(answ)
                 if answ == cOP.OK:
                     # transfer accepted
                     # sendig filename
-                    fileNameEncr = downloadName.encode()
+                    fileNameEncr = downloadName 
                     fileNameEncr = self.encrypt_data(fileNameEncr)
                     self.clientSock.send(fileNameEncr)
                     resp = self.clientSock.recv(1024)
-                    resp = resp.decode()
+                    resp = self.decrypt_data(resp)
                     if resp == cOP.OK:
                         skip = False
                         # sending filesize
                         filesize = self.clientSock.recv(1024)
                         filesize = self.decrypt_data(filesize)
-                        filesize = filesize.decode()
+                        filesize = filesize()
                         filesize = int(filesize)
                         
                         # checking size of file
                         # if < 1024 then file will be send in one package
                         if filesize < 1024:
                             skip = True                        
-                        fileData = ''
+                        fileData = b''
                         
                         # if filesize higher than 1024, algorithm fetches all packages 
                         while True:
@@ -361,7 +357,6 @@ class TCPClient:
                                 fileBytes = self.clientSock.recv(filesize)
                             else:
                                 fileBytes = self.clientSock.recv(1024)
-                            fileBytes = fileBytes.decode()
                             fileData += fileBytes
                             self.print_load_filestatus(len(fileData), filesize)
                             if int(filesize) == int(len(fileData)):
@@ -371,16 +366,16 @@ class TCPClient:
                                 pass
                         
                         # decoding and decrypting content from server
-                        fileData = fileData.encode()
+                        fileData = fileData 
                         fileData = self.decrypt_data(fileData)
                         download = self.download + downloadName
     
                         # writing download to file
-                        with open(download, 'wb') as file:
+                        with open(download, 'w') as file:
                             file.write(fileData)
                         file.close()
                         self.print_log(f'file written to {download}. closing connection')
-                        self.clientSock.send(cOP.OK.encode())
+                        self.clientSock.send(self.encrypt_data(cOP.OK))
                         self.clientSock.close()
                         
                     # closing socket if file could not be found
@@ -396,32 +391,32 @@ class TCPClient:
             # downloads directoriy and its subdirectories
             elif downloadType == 1:
                 # sending directory operand
-                self.clientSock.send(cOP.directory.encode())
+                self.clientSock.send(self.encrypt_data(cOP.directory))
                 
                 # variable to handle transfer
                 transferDone = False
                 
                 # receieving answer from server
-                answ = self.clientSock.recv(1024).decode()
+                answ = self.clientSock.recv(1024)
+                answ = self.decrypt_data(answ)
                 self.print_log(f'writing changes to {self.download}')
                 
                 # handling answer
                 if answ == cOP.OK:
                     # transfer accepted
                     # sending directory name
-                    dirNameEncr = downloadName.encode()
+                    dirNameEncr = downloadName 
                     dirNameEncr = self.encrypt_data(dirNameEncr)
                     self.clientSock.send(dirNameEncr)
-                    found = self.clientSock.recv(1024).decode()
+                    found = self.clientSock.recv(1024)
+                    found = self.decrypt_data(found)
                     
                     # directory found?
                     if found == cOP.OK:
                         # yes 
                         # receiving size of directory
                         backupSize = self.clientSock.recv(1024)
-                        backupSize = self.decrypt_data(backupSize)
-                        backupSize = backupSize.decode()
-                        
+                        backupSize = self.decrypt_data(backupSize)                        
                         # variables to handle download in the next step
                         dirSizeBefore = 0
                         ogDirSize = self.get_size(self.download + downloadName)
@@ -432,7 +427,8 @@ class TCPClient:
                         while not transferDone:
                             # receiev answer form server if download is finished
                             if not transferVar:
-                                answ = self.clientSock.recv(1024).decode()
+                                answ = self.clientSock.recv(1024)
+                                answ = self.decrypt_data(answ)
                             else: 
                                 answ = cOP.transfer
                                 transferVar = False
@@ -443,8 +439,8 @@ class TCPClient:
                                 if answ == cOP.transfer:
                                     pathName = self.clientSock.recv(1024)
                                     pathName = self.decrypt_data(pathName)
-                                    pathName = pathName.decode()  
-                                    fileStatus = self.clientSock.recv(1024).decode()
+                                    fileStatus = self.clientSock.recv(1024)
+                                    fileStatus = self.decrypt_data(fileStatus)
                                 else:
                                     fileStatus = cOP.file
                                 
@@ -455,7 +451,6 @@ class TCPClient:
                                     # receieving file name
                                     fileName = self.clientSock.recv(1024)
                                     fileName = self.decrypt_data(fileName)
-                                    fileName = fileName.decode()
                                     destDir = self.download + pathName
                                     check_dir(destDir)
                                     dirSizeBefore = self.get_size(destDir)
@@ -463,14 +458,13 @@ class TCPClient:
                                     # receieving file size
                                     filesize = self.clientSock.recv(1024)
                                     filesize = self.decrypt_data(filesize)
-                                    filesize = filesize.decode()
                                     filesize = int(filesize)
                                    
                                     # checking size of file
                                     if filesize < 1024:
                                         skip = True                                        
-                                    fileData = ''
-                                    self.clientSock.send(cOP.OK.encode())
+                                    fileData = b''
+                                    self.clientSock.send(self.encrypt_data(cOP.OK))
                                     
                                     # if filesize higher than 1024, algorithm fetches all packages                                     
                                     while True:
@@ -478,7 +472,6 @@ class TCPClient:
                                             fileBytes = self.clientSock.recv(filesize)
                                         else:
                                             fileBytes = self.clientSock.recv(1024)
-                                        fileBytes = fileBytes.decode()
                                         fileData += fileBytes
                                         self.print_load_status(len(fileData), filesize, destDir, dirSizeBefore, backupSize)
                                         if int(filesize) == int(len(fileData)):
@@ -487,12 +480,12 @@ class TCPClient:
                                             pass
                                     
                                     # decoding content from server
-                                    fileData = fileData.encode()
+                                    fileData = fileData 
                                     fileData = self.decrypt_data(fileData)                                 
                                     download = self.download + pathName + fileName
                                     
                                     # writing files 
-                                    with open(download, 'wb') as file:
+                                    with open(download, 'w') as file:
                                         file.write(fileData)
                                     file.close()
                                     
@@ -518,7 +511,7 @@ class TCPClient:
                                     print(log, end='\r')
                                     
                                     # sending "file received" message to server
-                                    self.clientSock.send(cOP.OK.encode())
+                                    self.clientSock.send(self.encrypt_data(cOP.OK))
                                 
                                 # transfer goes on
                                 else:
@@ -565,17 +558,17 @@ class TCPClient:
 
         # requesting list and sending operand
         self.print_log(f'requesting listfs from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.listfs.encode())
+        self.clientSock.send(self.encrypt_data(cOP.listfs))
         time.sleep(0.2)
         
         # sending client token
-        clientToken = str(clientToken).encode()
+        clientToken = str(clientToken) 
         clientToken = self.encrypt_data(clientToken)
         self.clientSock.send(clientToken)
         
         # receiving answer from server
         answ = self.clientSock.recv(1024)
-        answ = answ.decode()
+        answ = self.decrypt_data(answ)
         
         # answer OK?
         if answ == cOP.rst:
@@ -588,18 +581,18 @@ class TCPClient:
             # sending operands depending on outputfile
             if oFile == 'NULL':
                 # no output file
-                self.clientSock.send(cOP.listfs.encode())
+                self.clientSock.send(self.encrypt_data(cOP.listfs))
             else:
                 # output file
-                self.clientSock.send(cOP.grep.encode())
+                self.clientSock.send(self.encrypt_data(cOP.grep))
             
             # algorithm to receive all packages
             fragmentCount = 0
             filesize = self.clientSock.recv(1024)
             filesize = self.decrypt_data(filesize)
-            filesize = filesize.decode()
+             
             filesize = int(filesize)
-            fileData = ''
+            fileData = b''
             current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             if filesize > 1448:
@@ -609,7 +602,6 @@ class TCPClient:
                 fragmentCount = 1
             for i in range(int(fragmentCount)):
                 fileBytes = self.clientSock.recv(1500)
-                fileBytes = fileBytes.decode()
                 fileData += fileBytes
                 self.print_load_filestatus(len(fileData), filesize)
                 if filesize == len(fileData):
@@ -617,9 +609,8 @@ class TCPClient:
                     break
             
             # decoding and decrypting received data
-            fileData = fileData.encode()
+            fileData = fileData 
             fileData = self.decrypt_data(fileData)
-            fileData = fileData.decode()
             
             # handling output
             if oFile == "NULL":
@@ -636,7 +627,7 @@ class TCPClient:
                 self.print_log(f'filesystem written to {self.download + oFile}{space}')
             
             # sending operation done and closing socket
-            self.clientSock.send(cOP.OK.encode())
+            self.clientSock.send(self.encrypt_data(cOP.OK))
             self.clientSock.close()
 
     
@@ -646,16 +637,15 @@ class TCPClient:
 
         # requesting token validation
         self.print_log(f'requesting token validation from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.usertoken.encode())
+        self.clientSock.send(self.encrypt_data(cOP.usertoken))
         
         # sending user token
-        clientToken = str(clientToken).encode()
+        clientToken = str(clientToken) 
         clientToken = self.encrypt_data(clientToken)
         self.clientSock.send(clientToken)
         
         # revceiving answer from server
         integrity = self.clientSock.recv(1024)
-        integrity = integrity.decode()
         
         # token valid?
         if integrity == cOP.OK:
@@ -680,19 +670,18 @@ class TCPClient:
 
         # requesting update
         self.print_log(f'updating uc from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.serverupdate.encode())
+        self.clientSock.send(self.encrypt_data(cOP.serverupdate))
         
         # receieving file size
         filesize = self.clientSock.recv(1024)
         filesize = self.decrypt_data(filesize)
-        filesize = filesize.decode()
+         
         filesize = int(filesize)
-        fileData = ''
+        fileData = b''
         
         # reveiving bytes
         while True:
             fileBytes = self.clientSock.recv(1024)
-            fileBytes = fileBytes.decode()
             fileData += fileBytes
             self.print_load_filestatus(len(fileData), filesize)
             if int(filesize) == int(len(fileData)):
@@ -701,10 +690,8 @@ class TCPClient:
                 pass
             
         # decoding and decrypting bytes
-        fileData = fileData.encode()
-        fileData = self.decrypt_data(fileData)
-        fileData = fileData.decode()
-        
+        fileData = fileData 
+        fileData = self.decrypt_data(fileData)        
         # writing update to file
         with open('/usr/bin/uc', 'w') as file:
             file.write(fileData)
@@ -722,17 +709,17 @@ class TCPClient:
         # requesting file upload
         current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
         self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.upload.encode())
+        self.clientSock.send(self.encrypt_data(cOP.upload))
         time.sleep(0.4)
         
         # sending user token
-        userToken = str(userToken).encode()
+        userToken = str(userToken) 
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
         
         # receiving ansewer from server
         answ = self.clientSock.recv(1024)
-        answ = answ.decode()
+        answ = self.decrypt_data(answ)
         
         # answer OK?
         if answ == cOP.OK:
@@ -742,17 +729,17 @@ class TCPClient:
             
             # sending fileDirectory
             time.sleep(0.2)
-            fileDirectory = str(fileDirectory).encode()
+            fileDirectory = str(fileDirectory) 
             fileDirectory = self.encrypt_data(fileDirectory)
             self.clientSock.send(fileDirectory)
-            with open(userFile, 'rb') as file:
+            with open(userFile, 'r') as file:
                 data = file.read()
             file.close()
             data = self.encrypt_data(data)
             
             # sending filesize
             fileSize = len(data)
-            fileSize = str(fileSize).encode()
+            fileSize = str(fileSize) 
             fileSize = self.encrypt_data(fileSize)
             self.clientSock.send(fileSize)
             time.sleep(0.4)
@@ -760,12 +747,12 @@ class TCPClient:
             # reveiving answer from server
             self.clientSock.send(data)
             answ = self.clientSock.recv(1024)
-            
+            answ = self.decrypt_data(answ)
             # analyse answer
-            if answ.decode() == cOP.OK:
+            if answ == cOP.OK:
                 self.print_log('sending file   done')
                 self.clientSock.close()
-            elif answ.decode() == cOP.rst:
+            elif answ == cOP.rst:
                 self.print_log('sending file   failed')
             else:
                 self.print_log('could not resolve answer from server. quitting')
@@ -787,27 +774,28 @@ class TCPClient:
 
         # sending request to server 
         self.print_log(f'requesting removal from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.remove.encode())
+        self.clientSock.send(self.encrypt_data(cOP.remove))
         time.sleep(0.2)
         
         # sending user token for authentification
-        userToken = str(userToken).encode()
+        userToken = str(userToken) 
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
         
         # reveiving answer from server
         answ = self.clientSock.recv(1024)
-        answ = answ.decode()
+        answ = self.decrypt_data(answ)
         # analyse answer
         if answ == cOP.OK:
             # sending file or directory name to remove
             removePath = removeName
-            removeName = removeName.encode()
+            removeName = removeName 
             removeName = self.encrypt_data(removeName)
             
             # receiving answer
             self.clientSock.send(removeName)
-            answ = self.clientSock.recv(1024).decode()
+            answ = self.clientSock.recv(1024)
+            answ = self.decrypt_data(answ)
             
             # analysing answer
             if answ == cOP.OK:
@@ -881,17 +869,17 @@ class TCPClient:
             # requesting file transfer
             sentBytes = 0
             self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
-            self.clientSock.send(cOP.backup.encode())
+            self.clientSock.send(self.encrypt_data(cOP.backup))
             time.sleep(0.2)
             
             # sending user token for authentification
-            userToken = str(clientToken).encode()
+            userToken = str(clientToken) 
             userToken = self.encrypt_data(userToken)
             self.clientSock.send(userToken)
             
             # receiving answer from server
             answ = self.clientSock.recv(1024)
-            answ = answ.decode()
+            answ = self.decrypt_data(answ)
             
             # analysing answer
             if answ == cOP.OK:
@@ -899,7 +887,7 @@ class TCPClient:
                 rot.start()
                 
                 # sending destination directory name to server
-                dstDirEncr = str(dstDirectory).encode()
+                dstDirEncr = str(dstDirectory) 
                 dstDirEncr = self.encrypt_data(dstDirEncr)
                 self.clientSock.send(dstDirEncr)
                 time.sleep(0.2)
@@ -914,13 +902,13 @@ class TCPClient:
                 
                 # sending backupsize
                 backupSize = get_size(srcDirectory)
-                backupSize = str(backupSize).encode()
+                backupSize = str(backupSize) 
                 backupSize = self.encrypt_data(backupSize)
                 self.clientSock.send(backupSize)
                 time.sleep(0.2)
                 
                 # sending source directory name  
-                srcDirectoryEncr = srcDirectory.encode()
+                srcDirectoryEncr = srcDirectory 
                 srcDirectoryEncr = self.encrypt_data(srcDirectoryEncr)
                 self.clientSock.send(srcDirectoryEncr)
                 time.sleep(0.2)   
@@ -930,11 +918,11 @@ class TCPClient:
                 for dirpath, dirnames, files in os.walk(srcDirectory):
                     # sending status
                     time.sleep(0.2)
-                    self.clientSock.send(cOP.backup.encode())
+                    self.clientSock.send(self.encrypt_data(cOP.backup))
                     
                     # sending directory name
                     dirpath = dirpath + '/'
-                    dirpathEncr = str(dirpath).encode()
+                    dirpathEncr = str(dirpath) 
                     dirpathEncr = self.encrypt_data(dirpathEncr)
                     self.clientSock.send(dirpathEncr)
                     time.sleep(0.2)
@@ -943,22 +931,22 @@ class TCPClient:
                     for fileName in files:
                         # sending fileOperand
                         time.sleep(0.2)
-                        self.clientSock.send(cOP.file.encode())
+                        self.clientSock.send(self.encrypt_data(cOP.file))
                         
                         # sending fileName
-                        fileNameEncr = str(fileName).encode()
+                        fileNameEncr = str(fileName) 
                         fileNameEncr = self.encrypt_data(fileNameEncr)
                         time.sleep(0.2)
                         self.clientSock.send(fileNameEncr)
                         
                         # reading file data
-                        with open(dirpath + fileName, 'rb') as fileOpen:
+                        with open(dirpath + fileName, 'r') as fileOpen:
                             fileBytes = fileOpen.read()
                         fileOpen.close()
                         
                         # sending fileSize of unencrypted file
                         fileSize = len(fileBytes)
-                        fileSize = str(fileSize).encode()
+                        fileSize = str(fileSize) 
                         fileSize = self.encrypt_data(fileSize)
                         time.sleep(0.2)
                         self.clientSock.send(fileSize)
@@ -975,7 +963,7 @@ class TCPClient:
                         
                         # sending filesize of encrypted file
                         fileBytesSize = len(fileBytes)
-                        fileBytesSize = str(fileBytesSize).encode()
+                        fileBytesSize = str(fileBytesSize) 
                         fileBytesSize = self.encrypt_data(fileBytesSize)
                         self.clientSock.send(fileBytesSize)
                         time.sleep(0.2)
@@ -984,19 +972,19 @@ class TCPClient:
                         
                         # waiting for OK from server
                         status = self.clientSock.recv(1024)
-                        status = status.decode()
+                        status = self.decrypt_data(status)
                         if status == cOP.OK:
                             pass
                         else:
                             self.print_log(f'message from server: {status}')
                 
                 # transfer finished
-                self.clientSock.send(cOP.OK.encode())
+                self.clientSock.send(self.encrypt_data(cOP.OK))
                 time.sleep(0.2)
                 
                 # end check to verify that no data has been lost
                 endCheck = self.clientSock.recv(1024)
-                endCheck = endCheck.decode()
+                endCheck = self.decrypt_data(endCheck)
                 if endCheck == cOP.OK:
                     self.print_log('backup completed. quitting      ')
                     self.clientSock.close()
@@ -1027,7 +1015,7 @@ class TCPClient:
         # retrieve encryption key from user
         self.print_log("---encryption/decryption mode---")
         key = getpass("Enter key: ")
-        key = key.encode()
+        key = key 
         key = self.encrypt_data(key)
         answ = input("Do you want to (e)ncrypt or (d)ecrypt your data? »» ")
         
@@ -1035,14 +1023,14 @@ class TCPClient:
         if answ in "d, D":
             self.print_log("Decrypting your data. This may take a while...")
             self.key, self.iv = self.setup_encryption(self.clientSock)
-            self.clientSock.send(cOP.decrpyt.encode())
+            self.clientSock.send(self.encrypt_data(cOP.decrpyt))
             time.sleep(0.3)
             self.clientSock.send(key)
         
         # encryption
         elif answ in "e, E":
             self.print_log("Encrypting your data. This may take a while...")
-            self.clientSock.send(cOP.encrypt.encode())
+            self.clientSock.send(self.encrypt_data(cOP.encrypt))
             time.sleep(0.3)
             self.clientSock.send(key)
         
@@ -1052,7 +1040,7 @@ class TCPClient:
         
         # receive server answer
         recv = self.clientSock.recv(1024)
-        recv = recv.decode()
+        recv = self.decrypt_data(recv)
         self.print_log(recv)
         self.clientSock.close()
             
@@ -1080,27 +1068,28 @@ class TCPClient:
             
         # request package from server 
         self.print_log(f'installing package from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.package.encode())
+        self.clientSock.send(self.encrypt_data(cOP.package))
         time.sleep(0.2)
         
         # sending token for authentification 
-        userToken = str(userToken).encode()
+        userToken = str(userToken) 
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
         
         # receiving answer 
         answ = self.clientSock.recv(1024)
-        answ = answ.decode()
+        answ = self.decrypt_data(answ)
         
         # handling answer
         if answ == cOP.OK:
             # sending package name
-            pkgencr = package.encode()
+            pkgencr = package 
             pkgencr = self.encrypt_data(pkgencr)
             
             # receiving answer
             self.clientSock.send(pkgencr)
-            answ = self.clientSock.recv(1024).decode()
+            answ = self.clientSock.recv(1024)
+            answ = self.decrypt_data(answ)
             
             # package not found
             if answ != cOP.OK:
@@ -1114,7 +1103,6 @@ class TCPClient:
                 # receive package size
                 pkgsize = self.clientSock.recv(1024)
                 pkgsize = self.decrypt_data(pkgsize)
-                pgksize = pkgsize.decode()
                 
                 # variables for transfer
                 transferDone = False
@@ -1128,7 +1116,8 @@ class TCPClient:
                     
                     # receive status from server
                     if not transferVar:
-                        answ = self.clientSock.recv(1024).decode()
+                        answ = self.clientSock.recv(1024)
+                        self.decrypt_data(answ)
                     
                     # set transfer to ongoing
                     else: 
@@ -1142,9 +1131,9 @@ class TCPClient:
                         if answ == cOP.transfer:
                             pathName = self.clientSock.recv(1024)
                             pathName = self.decrypt_data(pathName)
-                            pathName = pathName.decode()  
                             check_dir('/etc/' + pathName)
-                            fileStatus = self.clientSock.recv(1024).decode()
+                            fileStatus = self.clientSock.recv(1024)
+                            fileStatus = self.decrypt_data(fileStatus)
                         
                         # set file status to file
                         else:
@@ -1155,7 +1144,6 @@ class TCPClient:
                             # receiving file name
                             fileName = self.clientSock.recv(1024)
                             fileName = self.decrypt_data(fileName)
-                            fileName = fileName.decode()
                             
                             # set file destination
                             destDir = self.package_path + package + '/'
@@ -1166,18 +1154,17 @@ class TCPClient:
                             # receive file size 
                             filesize = self.clientSock.recv(1024)
                             filesize = self.decrypt_data(filesize)
-                            filesize = filesize.decode()
+                             
                             filesize = int(filesize)
-                            fileData = ''
+                            fileData = b''
                             current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                             
                             # send status OK 
-                            self.clientSock.send(cOP.OK.encode())
+                            self.clientSock.send(self.encrypt_data(cOP.OK))
                             
                             # receive file bytes
                             while True:
                                 fileBytes = self.clientSock.recv(1024)
-                                fileBytes = fileBytes.decode()
                                 fileData += fileBytes
                                 current_package_size += len(fileData)
                                 currSize = (int(current_package_size)/int(pkgsize))*100
@@ -1192,15 +1179,15 @@ class TCPClient:
                                     pass
                                 
                             # decrypt file data
-                            fileData = fileData.encode()
+                            fileData = fileData 
                             fileData = self.decrypt_data(fileData)
                             
                             # write file 
                             download = '/etc/' + pathName + fileName
-                            with open(download, 'wb') as file:
+                            with open(download, 'w') as file:
                                 file.write(fileData)
                             file.close()
-                            self.clientSock.send(cOP.OK.encode())
+                            self.clientSock.send(self.encrypt_data(cOP.OK))
                         
                         # set transfer to ongoing
                         else:
@@ -1230,18 +1217,18 @@ class TCPClient:
         self.key, self.iv = self.setup_encryption(self.clientSock)
         # request to list available packages
         self.print_log(f'listing available packages from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(cOP.listall.encode())
+        self.clientSock.send(self.encrypt_data(cOP.listall))
         time.sleep(0.2)
         
         # sending user token for authentification
-        userToken = str(userToken).encode()
+        userToken = str(userToken) 
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
         
         # receiving answer
         answ = self.clientSock.recv(1024)
-        answ = answ.decode()
-        endData = ''.encode()
+        answ = self.decrypt_data(answ)
+        endData = '' 
         
         # analysing answer
         if answ == cOP.OK:
@@ -1255,7 +1242,6 @@ class TCPClient:
             
             # decrypting data
             data = self.decrypt_data(endData)
-            data = data.decode()
             
             # printing list of available packages
             print(data)
@@ -1293,30 +1279,29 @@ class TCPClient:
         self.key, self.iv = self.setup_encryption(self.clientSock)
         # request package search
         self.print_log(f"searching available package from [{self.serverAddr}]::[{self.serverPort}]")
-        self.clientSock.send(cOP.search.encode())
+        self.clientSock.send(self.encrypt_data(cOP.search))
         time.sleep(0.2)
         
         # sending authentifiction token
-        userToken = str(userToken).encode()
+        userToken = str(userToken) 
         userToken = self.encrypt_data(userToken)
         self.clientSock.send(userToken)
         
         # receiving answer
         answ = self.clientSock.recv(1024)
-        answ = answ.decode()
-        endData = ''.encode()
+        answ = self.decrypt_data(answ)
+        endData = '' 
         
         # anaylising answer
         if answ == cOP.OK:
             # sending package name
-            package = self.encrypt_data(package.encode())
+            package = self.encrypt_data(package )
             self.clientSock.send(package)
             time.sleep(0.2)
             
             # receiving answer
             data = self.clientSock.recv(1024)
             data = self.decrypt_data(data)
-            data = data.decode()
             
             # printing answer from server
             self.print_log("message from server:")
