@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.backends import default_backend
 
+client_version = 'v1.1.8'
 
 # class for coloured output
 class colors:
@@ -59,7 +60,62 @@ class cOP:
     decrpyt = "999"
     search = "876"
 
-client_version = 'v1.1.8'
+# encryption stub
+class EncryptionStub:
+    def generate_ecdh_keys(self):
+        client_private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        client_public_key = client_private_key.public_key()
+        return client_private_key, client_public_key
+
+    def generate_key_iv(self):
+        key = os.urandom(32)  # Generate a 256-bit (32-byte) key
+        iv = os.urandom(16)   # Generate a 128-bit (16-byte) IV
+        return key, iv
+
+    def encrypt_data(self, plaintext, text=False):
+        if text:
+            plaintext = plaintext.encode('utf-8')
+        cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
+        padder = padding.PKCS7(algorithms.AES.block_size).padder()
+        padded_plaintext = padder.update(plaintext) + padder.finalize()
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
+        return ciphertext
+
+    def decrypt_data(self, ciphertext, text=False):
+        cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+        plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
+        if text:
+            return plaintext.decode('utf-8')
+        return plaintext
+
+    def setup_encryption(self, conn):
+        server_public_bytes = conn.recv(1024)
+        server_public_key = serialization.load_pem_public_key(
+            server_public_bytes,
+            backend=default_backend()
+        )
+        client_private_key, client_public_key = self.generate_ecdh_keys()
+        client_public_bytes = client_public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        conn.sendall(client_public_bytes)
+        shared_secret = client_private_key.exchange(ec.ECDH(), server_public_key)
+        derived_key = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32 + 16,  # 32 bytes for AES-256 key, 16 bytes for IV
+            salt=None,
+            info=b'handshake data',
+            backend=default_backend()
+        ).derive(shared_secret)
+        self.key = derived_key[:32]
+        self.iv = derived_key[32:48]
+        return self.key, self.iv
+
 
 # client implementation
 class TCPClient:
@@ -320,7 +376,7 @@ class TCPClient:
         resp = self.clientSock.recv(1024)
         resp = self.decrypt_data(resp)
         
-        # recieving message from server
+        # receiving message from server
         if resp == cOP.OK:
             # authentification OK
             # downloading file
@@ -905,8 +961,8 @@ class TCPClient:
                 backupSize = str(backupSize) 
                 backupSize = self.encrypt_data(backupSize)
                 self.clientSock.send(backupSize)
-                time.sleep(0.2)
-                
+                time.sleep(0.2)             
+
                 # sending source directory name  
                 srcDirectoryEncr = srcDirectory 
                 srcDirectoryEncr = self.encrypt_data(srcDirectoryEncr)
@@ -940,7 +996,9 @@ class TCPClient:
                         self.clientSock.send(fileNameEncr)
                         
                         # reading file data
-                        with open(dirpath + fileName, 'r') as fileOpen:
+                        print(f"open file {dirpath}{fileName}")
+
+                        with open(dirpath + fileName, 'rb') as fileOpen:
                             fileBytes = fileOpen.read()
                         fileOpen.close()
                         
@@ -959,11 +1017,13 @@ class TCPClient:
                         print_process(sentBytes)
                         
                         # sending bytes
+                        print("sending bytes")
                         fileBytes = self.encrypt_data(fileBytes)
                         
                         # sending filesize of encrypted file
                         fileBytesSize = len(fileBytes)
                         fileBytesSize = str(fileBytesSize) 
+                        print("sending filebytesize")
                         fileBytesSize = self.encrypt_data(fileBytesSize)
                         self.clientSock.send(fileBytesSize)
                         time.sleep(0.2)
