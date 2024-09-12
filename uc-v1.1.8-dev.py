@@ -60,17 +60,25 @@ class cOP:
     decrpyt = "999"
     search = "876"
 
+# debug class
+class Debug:
+    def __init__(self, enabled=True):
+        self.enabled = enabled
+    
+    def debug(self, message):
+        if self.enabled:
+            print(f"[DEBUG]: {message}")
+
 # encryption stub
 class EncryptionStub:
+    def __init__(self):
+        self.key = ""
+        self.iv = 0
+
     def generate_ecdh_keys(self):
         client_private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
         client_public_key = client_private_key.public_key()
         return client_private_key, client_public_key
-
-    def generate_key_iv(self):
-        key = os.urandom(32)  # Generate a 256-bit (32-byte) key
-        iv = os.urandom(16)   # Generate a 128-bit (16-byte) IV
-        return key, iv
 
     def encrypt_data(self, plaintext, text=False):
         if text:
@@ -114,17 +122,17 @@ class EncryptionStub:
         ).derive(shared_secret)
         self.key = derived_key[:32]
         self.iv = derived_key[32:48]
-        return self.key, self.iv
-
 
 # client implementation
 class TCPClient:
 
     # initializes TCPClient
-    def __init__(self, host, port):
+    def __init__(self, host, port, debugger):
         # defines address and port
         self.serverAddr = host
         self.serverPort = port
+
+        self.debugger = debugger
         
         # defines file paths 
         self.keyfile = '/etc/ultron-server/key.txt'
@@ -143,6 +151,7 @@ class TCPClient:
         self.currDownloadSize = 0
         self.percStatus = '0.00 %'         
         self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.time_buffer = 0.2
         
     # prints output to stdout
     def print_log(self, msg):
@@ -151,7 +160,7 @@ class TCPClient:
 
     # tries to connect to the configured server
     def check_conn(self, serverAddr, serverPort):
-        time.sleep(0.5)
+        time.sleep(self.time_buffer)
         if self.connection_success:
             pass
         else:
@@ -210,25 +219,25 @@ class TCPClient:
         return key, iv
 
     def encrypt_data(self, plaintext):
-        #print(f"[DEBUG] Plaintext before encryption: {plaintext}")
+        self.debugger.debug(f"Plaintext before encryption: {plaintext}")
         cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
         padder = padding.PKCS7(algorithms.AES.block_size).padder()
         padded_plaintext = padder.update(plaintext.encode('utf-8')) + padder.finalize()
-        #print(f"[DEBUG] Padded plaintext: {padded_plaintext}")
+        self.debugger.debug(f"Padded plaintext: {padded_plaintext}")
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
-        #print(f"[DEBUG] Ciphertext: {ciphertext}")
+        self.debugger.debug(f"Ciphertext: {ciphertext}")
         return ciphertext
 
     def decrypt_data(self, ciphertext):
-        #print(f"[DEBUG] Ciphertext before decryption: {ciphertext}")
+        self.debugger.debug(f"Ciphertext before decryption: {ciphertext}")
         cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
         decryptor = cipher.decryptor()
         padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-        #print(f"[DEBUG] Padded plaintext after decryption: {padded_plaintext}")
+        self.debugger.debug(f"Padded plaintext after decryption: {padded_plaintext}")
         unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
         plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-        #print(f"[DEBUG] Plaintext after unpadding: {plaintext}")
+        self.debugger.debug(f"Plaintext after unpadding: {plaintext}")
         return plaintext.decode('utf-8')
 
     def setup_encryption(self, conn):
@@ -366,7 +375,7 @@ class TCPClient:
         # requesting transfer
         self.print_log(f'requesting transfer from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(self.encrypt_data(cOP.download))
-        time.sleep(0.2)
+        time.sleep(self.time_buffer)
         
         # authentication
         # sending client token
@@ -427,6 +436,7 @@ class TCPClient:
                         download = self.download + downloadName
     
                         # writing download to file
+                        check_dir(self.download)
                         with open(download, 'w') as file:
                             file.write(fileData)
                         file.close()
@@ -615,7 +625,7 @@ class TCPClient:
         # requesting list and sending operand
         self.print_log(f'requesting listfs from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(self.encrypt_data(cOP.listfs))
-        time.sleep(0.2)
+        time.sleep(self.time_buffer)
         
         # sending client token
         clientToken = str(clientToken) 
@@ -694,7 +704,8 @@ class TCPClient:
         # requesting token validation
         self.print_log(f'requesting token validation from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(self.encrypt_data(cOP.usertoken))
-        
+        time.sleep(self.time_buffer)
+
         # sending user token
         clientToken = str(clientToken) 
         clientToken = self.encrypt_data(clientToken)
@@ -766,7 +777,7 @@ class TCPClient:
         current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
         self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(self.encrypt_data(cOP.upload))
-        time.sleep(0.4)
+        time.sleep(self.time_buffer)
         
         # sending user token
         userToken = str(userToken) 
@@ -784,7 +795,7 @@ class TCPClient:
             print(f'[{current_date_time}] sending file...', end='\r')
             
             # sending fileDirectory
-            time.sleep(0.2)
+            time.sleep(self.time_buffer)
             fileDirectory = str(fileDirectory) 
             fileDirectory = self.encrypt_data(fileDirectory)
             self.clientSock.send(fileDirectory)
@@ -798,7 +809,7 @@ class TCPClient:
             fileSize = str(fileSize) 
             fileSize = self.encrypt_data(fileSize)
             self.clientSock.send(fileSize)
-            time.sleep(0.4)
+            time.sleep(self.time_buffer)
             
             # reveiving answer from server
             self.clientSock.send(data)
@@ -831,7 +842,7 @@ class TCPClient:
         # sending request to server 
         self.print_log(f'requesting removal from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(self.encrypt_data(cOP.remove))
-        time.sleep(0.2)
+        time.sleep(self.time_buffer)
         
         # sending user token for authentification
         userToken = str(userToken) 
@@ -926,7 +937,7 @@ class TCPClient:
             sentBytes = 0
             self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
             self.clientSock.send(self.encrypt_data(cOP.backup))
-            time.sleep(0.2)
+            time.sleep(self.time_buffer)
             
             # sending user token for authentification
             userToken = str(clientToken) 
@@ -946,7 +957,7 @@ class TCPClient:
                 dstDirEncr = str(dstDirectory) 
                 dstDirEncr = self.encrypt_data(dstDirEncr)
                 self.clientSock.send(dstDirEncr)
-                time.sleep(0.2)
+                time.sleep(self.time_buffer)
                 
                 # check if directory exists
                 if os.path.exists(str(srcDirectory)):
@@ -961,19 +972,19 @@ class TCPClient:
                 backupSize = str(backupSize) 
                 backupSize = self.encrypt_data(backupSize)
                 self.clientSock.send(backupSize)
-                time.sleep(0.2)             
+                time.sleep(self.time_buffer)             
 
                 # sending source directory name  
                 srcDirectoryEncr = srcDirectory 
                 srcDirectoryEncr = self.encrypt_data(srcDirectoryEncr)
                 self.clientSock.send(srcDirectoryEncr)
-                time.sleep(0.2)   
+                time.sleep(self.time_buffer)   
                 
                 # sending directories and its files to the server
                 cut = len(srcDirectory)
                 for dirpath, dirnames, files in os.walk(srcDirectory):
                     # sending status
-                    time.sleep(0.2)
+                    time.sleep(self.time_buffer)
                     self.clientSock.send(self.encrypt_data(cOP.backup))
                     
                     # sending directory name
@@ -981,24 +992,23 @@ class TCPClient:
                     dirpathEncr = str(dirpath) 
                     dirpathEncr = self.encrypt_data(dirpathEncr)
                     self.clientSock.send(dirpathEncr)
-                    time.sleep(0.2)
+                    time.sleep(self.time_buffer)
                     
                     # handling files and directories
                     for fileName in files:
                         # sending fileOperand
-                        time.sleep(0.2)
+                        time.sleep(self.time_buffer)
                         self.clientSock.send(self.encrypt_data(cOP.file))
                         
                         # sending fileName
                         fileNameEncr = str(fileName) 
                         fileNameEncr = self.encrypt_data(fileNameEncr)
-                        time.sleep(0.2)
                         self.clientSock.send(fileNameEncr)
+                        time.sleep(self.time_buffer)
                         
                         # reading file data
-                        print(f"open file {dirpath}{fileName}")
-
-                        with open(dirpath + fileName, 'rb') as fileOpen:
+                        self.debugger.debug(f"open file {dirpath}{fileName}")
+                        with open(dirpath + fileName, 'r') as fileOpen:
                             fileBytes = fileOpen.read()
                         fileOpen.close()
                         
@@ -1006,9 +1016,8 @@ class TCPClient:
                         fileSize = len(fileBytes)
                         fileSize = str(fileSize) 
                         fileSize = self.encrypt_data(fileSize)
-                        time.sleep(0.2)
                         self.clientSock.send(fileSize)
-                        time.sleep(0.2)
+                        time.sleep(self.time_buffer)
                         
                         # printing process
                         sentBytes += len(fileBytes)
@@ -1017,18 +1026,19 @@ class TCPClient:
                         print_process(sentBytes)
                         
                         # sending bytes
-                        print("sending bytes")
+                        self.debugger.debug(f"encrypting bytes {fileBytes}")
                         fileBytes = self.encrypt_data(fileBytes)
                         
                         # sending filesize of encrypted file
                         fileBytesSize = len(fileBytes)
                         fileBytesSize = str(fileBytesSize) 
-                        print("sending filebytesize")
+                        self.debugger.debug(f"sending filebytesize {fileBytesSize}")
                         fileBytesSize = self.encrypt_data(fileBytesSize)
                         self.clientSock.send(fileBytesSize)
-                        time.sleep(0.2)
+                        time.sleep(self.time_buffer)
+                        self.debugger.debug(f"sending filebytes {fileBytes}")
                         self.clientSock.send(fileBytes)
-                        time.sleep(0.3)
+                        time.sleep(self.time_buffer)
                         
                         # waiting for OK from server
                         status = self.clientSock.recv(1024)
@@ -1040,7 +1050,7 @@ class TCPClient:
                 
                 # transfer finished
                 self.clientSock.send(self.encrypt_data(cOP.OK))
-                time.sleep(0.2)
+                time.sleep(self.time_buffer)
                 
                 # end check to verify that no data has been lost
                 endCheck = self.clientSock.recv(1024)
@@ -1084,14 +1094,14 @@ class TCPClient:
             self.print_log("Decrypting your data. This may take a while...")
             self.key, self.iv = self.setup_encryption(self.clientSock)
             self.clientSock.send(self.encrypt_data(cOP.decrpyt))
-            time.sleep(0.3)
+            time.sleep(self.time_buffer)
             self.clientSock.send(key)
         
         # encryption
         elif answ in "e, E":
             self.print_log("Encrypting your data. This may take a while...")
             self.clientSock.send(self.encrypt_data(cOP.encrypt))
-            time.sleep(0.3)
+            time.sleep(self.time_buffer)
             self.clientSock.send(key)
         
         # wrong input
@@ -1129,7 +1139,7 @@ class TCPClient:
         # request package from server 
         self.print_log(f'installing package from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(self.encrypt_data(cOP.package))
-        time.sleep(0.2)
+        time.sleep(self.time_buffer)
         
         # sending token for authentification 
         userToken = str(userToken) 
@@ -1278,7 +1288,7 @@ class TCPClient:
         # request to list available packages
         self.print_log(f'listing available packages from [{self.serverAddr}]::[{self.serverPort}]')
         self.clientSock.send(self.encrypt_data(cOP.listall))
-        time.sleep(0.2)
+        time.sleep(self.time_buffer)
         
         # sending user token for authentification
         userToken = str(userToken) 
@@ -1340,7 +1350,7 @@ class TCPClient:
         # request package search
         self.print_log(f"searching available package from [{self.serverAddr}]::[{self.serverPort}]")
         self.clientSock.send(self.encrypt_data(cOP.search))
-        time.sleep(0.2)
+        time.sleep(self.time_buffer)
         
         # sending authentifiction token
         userToken = str(userToken) 
@@ -1357,7 +1367,7 @@ class TCPClient:
             # sending package name
             package = self.encrypt_data(package )
             self.clientSock.send(package)
-            time.sleep(0.2)
+            time.sleep(self.time_buffer)
             
             # receiving answer
             data = self.clientSock.recv(1024)
@@ -1438,7 +1448,7 @@ def recieve_token(tokenfile):
 # list for available options
 opList = [
     "-h", "--h", "-help", "--h","--r","--d", "--p", "--b", "--u", "--updateuc", "--auth", "--listfs",
-    '--updateuc-devops','install', 'remove', 'search', 'update', 'list-all', "--c"
+    '--updateuc-devops','install', 'remove', 'search', 'update', 'list-all', "--c", "--debug"
 ]
 
 
@@ -1475,8 +1485,16 @@ def client_start():
         configFile.close()
         print("configuration written to ", configfile)
     
-    # handling arguments 
-    client = TCPClient(serveraddr, int(serverport))   
+    # handling arguments
+    # precheck args for debug enabled
+    debug = False
+    for i in range(len(sys.argv)):
+        if(sys.argv[i] == "--debug"):
+            debug = True 
+    debugger = Debug(enabled=debug)
+
+    debugger.debug(f"Creating TCPServer instance.")
+    client = TCPClient(serveraddr, int(serverport), debugger)   
     sysnumberone = 1
     sysnumbertwo = 2
     sysnumberthree = 3
