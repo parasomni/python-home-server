@@ -31,34 +31,28 @@ class colors:
 
 # necessary oparands for communication between client and server
 class cOP:
-    size = "333"
-    file = "334"
-    fileend = "335"
-    directory = "336"
-    transfer = "340"
+    FILE = "334"
+    DIR = "336"
+    TRANSFER = "340"
     OK = "200"
-    forbidden = "403"
-    notfound = "404"
-    chatroom = "808"
-    remove = "299"
-    upload = "300"
-    download = "301"
-    serverupdate = "302"
-    ping = "303"
-    backup = "304"
-    sync = "305"
-    listfs = "306"
-    grep = "307"
-    usertoken = "100"
-    syn = "SYN"
-    rst = "RST"
-    sya = "SYA"
-    ack = "ACK"
-    package = "310"
-    listall = "311"
-    encrypt = "000"
-    decrpyt = "999"
-    search = "876"
+    FORBIDDEN = "403"
+    NOT_FOUND = "404"
+    UPLOAD = "300"
+    REMOVE = "299"
+    DOWNLOAD = "301"
+    SERVERUPDATE = "302"
+    PING = "303"
+    BACKUP = "304"
+    LISTFS = "306"
+    GREP = "307"
+    USERTOKEN = "100"
+    RST = "RST"
+    PACKAGE = "310"
+    LISTALL = "311"
+    ENCRPYT = "000"
+    DECRYPT = "999" 
+    SEARCH = "876"
+    LOCK = "503"
 
 # debug class
 class Debug:
@@ -357,7 +351,7 @@ class TCPClient:
         self.key, self.iv = self.setup_encryption(self.clientSock)
 
         self.print_log(f'requesting ping from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.ping))
+        self.clientSock.send(self.encrypt_data(cOP.PING))
         answ = self.clientSock.recv(1024)
         ping = self.decrypt_data(answ)
         if ping == cOP.OK:
@@ -374,7 +368,7 @@ class TCPClient:
 
         # requesting transfer
         self.print_log(f'requesting transfer from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.download))
+        self.clientSock.send(self.encrypt_data(cOP.DOWNLOAD))
         time.sleep(self.time_buffer)
         
         # authentication
@@ -391,7 +385,7 @@ class TCPClient:
             # downloading file
             if downloadType == 0:
                 # sending file operand
-                self.clientSock.send(self.encrypt_data(cOP.file))
+                self.clientSock.send(self.encrypt_data(cOP.FILE))
                 answ = self.clientSock.recv(1024)
                 answ = self.decrypt_data(answ)
                 if answ == cOP.OK:
@@ -445,7 +439,7 @@ class TCPClient:
                         self.clientSock.close()
                         
                     # closing socket if file could not be found
-                    elif resp == cOP.rst:
+                    elif resp == cOP.RST:
                         self.print_log(f'file_not_found_error: closing connection to [{self.serverAddr}]::[{self.serverPort}]')
                         self.clientSock.close()
                 
@@ -457,7 +451,7 @@ class TCPClient:
             # downloads directoriy and its subdirectories
             elif downloadType == 1:
                 # sending directory operand
-                self.clientSock.send(self.encrypt_data(cOP.directory))
+                self.clientSock.send(self.encrypt_data(cOP.DIR))
                 
                 # variable to handle transfer
                 transferDone = False
@@ -496,22 +490,22 @@ class TCPClient:
                                 answ = self.clientSock.recv(1024)
                                 answ = self.decrypt_data(answ)
                             else: 
-                                answ = cOP.transfer
+                                answ = cOP.TRANSFER
                                 transferVar = False
                                 
                             # transfer is still going on
-                            if answ == cOP.transfer or answ == cOP.file:
+                            if answ == cOP.TRANSFER or answ == cOP.FILE:
                                 # receieving directory name
-                                if answ == cOP.transfer:
+                                if answ == cOP.TRANSFER:
                                     pathName = self.clientSock.recv(1024)
                                     pathName = self.decrypt_data(pathName)
                                     fileStatus = self.clientSock.recv(1024)
                                     fileStatus = self.decrypt_data(fileStatus)
                                 else:
-                                    fileStatus = cOP.file
+                                    fileStatus = cOP.FILE
                                 
                                 # receieving file 
-                                if fileStatus == cOP.file:
+                                if fileStatus == cOP.FILE:
                                     skip = False
                                     
                                     # receieving file name
@@ -584,7 +578,7 @@ class TCPClient:
                                     transferVar = True
                             
                             # download finished
-                            elif answ == cOP.rst:
+                            elif answ == cOP.RST:
                                 # checking if content is missing
                                 if self.end_check(ogDirSize, backupSize, destDir):
                                     # all fine
@@ -608,7 +602,7 @@ class TCPClient:
                         self.clientSock.close()
 
         # authentification failure
-        elif resp == cOP.forbidden:
+        elif resp == cOP.FORBIDDEN:
             self.print_log('403 forbidden: invalid token')
             self.clientSock.close()
         
@@ -624,7 +618,7 @@ class TCPClient:
 
         # requesting list and sending operand
         self.print_log(f'requesting listfs from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.listfs))
+        self.clientSock.send(self.encrypt_data(cOP.LISTFS))
         time.sleep(self.time_buffer)
         
         # sending client token
@@ -637,7 +631,7 @@ class TCPClient:
         answ = self.decrypt_data(answ)
         
         # answer OK?
-        if answ == cOP.rst:
+        if answ == cOP.RST:
             # no
             # closing socket
             self.print_log(f'connection refused by [{self.serverAddr}]::[{self.serverPort}]')
@@ -647,10 +641,10 @@ class TCPClient:
             # sending operands depending on outputfile
             if oFile == 'NULL':
                 # no output file
-                self.clientSock.send(self.encrypt_data(cOP.listfs))
+                self.clientSock.send(self.encrypt_data(cOP.LISTFS))
             else:
                 # output file
-                self.clientSock.send(self.encrypt_data(cOP.grep))
+                self.clientSock.send(self.encrypt_data(cOP.GREP))
             
             # algorithm to receive all packages
             fragmentCount = 0
@@ -703,7 +697,7 @@ class TCPClient:
 
         # requesting token validation
         self.print_log(f'requesting token validation from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.usertoken))
+        self.clientSock.send(self.encrypt_data(cOP.USERTOKEN))
         time.sleep(self.time_buffer)
 
         # sending user token
@@ -720,7 +714,7 @@ class TCPClient:
             # printing to stdout and closing socket
             self.print_log('auth_token valid')
             self.clientSock.close()
-        elif integrity == cOP.rst:
+        elif integrity == cOP.RST:
             # no 
             # printing to stdout and closing socket
             self.print_log('auth_token invalid. Please contact the administrator for a new token')
@@ -737,7 +731,7 @@ class TCPClient:
 
         # requesting update
         self.print_log(f'updating uc from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.serverupdate))
+        self.clientSock.send(self.encrypt_data(cOP.SERVERUPDATE))
         
         # receieving file size
         filesize = self.clientSock.recv(1024)
@@ -776,7 +770,7 @@ class TCPClient:
         # requesting file upload
         current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')        
         self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.upload))
+        self.clientSock.send(self.encrypt_data(cOP.UPLOAD))
         time.sleep(self.time_buffer)
         
         # sending user token
@@ -819,14 +813,14 @@ class TCPClient:
             if answ == cOP.OK:
                 self.print_log('sending file   done')
                 self.clientSock.close()
-            elif answ == cOP.rst:
+            elif answ == cOP.RST:
                 self.print_log('sending file   failed')
             else:
                 self.print_log('could not resolve answer from server. quitting')
                 self.clientSock.close()
         
         # invalid token
-        elif answ == cOP.rst:
+        elif answ == cOP.RST:
             self.print_log('permission denied: token_invalid')
             self.clientSock.close()
         
@@ -841,7 +835,7 @@ class TCPClient:
 
         # sending request to server 
         self.print_log(f'requesting removal from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.remove))
+        self.clientSock.send(self.encrypt_data(cOP.REMOVE))
         time.sleep(self.time_buffer)
         
         # sending user token for authentification
@@ -868,7 +862,7 @@ class TCPClient:
             if answ == cOP.OK:
                 self.print_log(f'removed {removePath}')
                 self.clientSock.close()
-            elif answ == cOP.notfound:
+            elif answ == cOP.NOT_FOUND:
                 self.print_log(f'ERROR: file_not_found_error: could not locate {removePath}')
                 self.clientSock.close()
 
@@ -936,7 +930,7 @@ class TCPClient:
             # requesting file transfer
             sentBytes = 0
             self.print_log(f'requesting file transfer from [{self.serverAddr}]::[{self.serverPort}]')
-            self.clientSock.send(self.encrypt_data(cOP.backup))
+            self.clientSock.send(self.encrypt_data(cOP.BACKUP))
             time.sleep(self.time_buffer)
             
             # sending user token for authentification
@@ -948,8 +942,22 @@ class TCPClient:
             answ = self.clientSock.recv(1024)
             answ = self.decrypt_data(answ)
             
+            # trying to acquire write access to the client data
+            if answ == cOP.LOCK:
+                self.print_log(f'WARNING: acquiring lock failed. Client resources already in use. Please wait.')
+                answ = self.clientSock.recv(1024)
+                answ = self.decrypt_data(answ)
+                if answ == cOP.OK:
+                    answ = True
+            elif answ == cOP.OK:
+                answ = True
+            else:
+                self.print_log("ERROR: backup failed: ", answ)
+                self.clientSock.close()
+                sys.exit()
+                
             # analysing answer
-            if answ == cOP.OK:
+            if answ:
                 rot = threading.Thread(target=print_loading_backup)
                 rot.start()
                 
@@ -985,7 +993,7 @@ class TCPClient:
                 for dirpath, dirnames, files in os.walk(srcDirectory):
                     # sending status
                     time.sleep(self.time_buffer)
-                    self.clientSock.send(self.encrypt_data(cOP.backup))
+                    self.clientSock.send(self.encrypt_data(cOP.BACKUP))
                     
                     # sending directory name
                     dirpath = dirpath + '/'
@@ -998,7 +1006,7 @@ class TCPClient:
                     for fileName in files:
                         # sending fileOperand
                         time.sleep(self.time_buffer)
-                        self.clientSock.send(self.encrypt_data(cOP.file))
+                        self.clientSock.send(self.encrypt_data(cOP.FILE))
                         
                         # sending fileName
                         fileNameEncr = str(fileName) 
@@ -1064,7 +1072,7 @@ class TCPClient:
                     self.clientSock.close()
             
             # connection refused by server
-            elif answ == cOP.rst():
+            elif answ == cOP.RST():
                 self.print_log('connection refused')
                 self.clientSock.close()
             
@@ -1100,7 +1108,7 @@ class TCPClient:
         # encryption
         elif answ in "e, E":
             self.print_log("Encrypting your data. This may take a while...")
-            self.clientSock.send(self.encrypt_data(cOP.encrypt))
+            self.clientSock.send(self.encrypt_data(cOP.ENCRYPT))
             time.sleep(self.time_buffer)
             self.clientSock.send(key)
         
@@ -1138,7 +1146,7 @@ class TCPClient:
             
         # request package from server 
         self.print_log(f'installing package from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.package))
+        self.clientSock.send(self.encrypt_data(cOP.PACKAGE))
         time.sleep(self.time_buffer)
         
         # sending token for authentification 
@@ -1191,14 +1199,14 @@ class TCPClient:
                     
                     # set transfer to ongoing
                     else: 
-                        answ = cOP.transfer
+                        answ = cOP.TRANSFER
                         transferVar = False
                         
                     # transfer ongoing    
-                    if answ == cOP.transfer or answ == cOP.file:
+                    if answ == cOP.TRANSFER or answ == cOP.FILE:
                         
                         # receiving path name for package
-                        if answ == cOP.transfer:
+                        if answ == cOP.TRANSFER:
                             pathName = self.clientSock.recv(1024)
                             pathName = self.decrypt_data(pathName)
                             check_dir('/etc/' + pathName)
@@ -1207,10 +1215,10 @@ class TCPClient:
                         
                         # set file status to file
                         else:
-                            fileStatus = cOP.file
+                            fileStatus = cOP.FILE
                             
                         # handling file
-                        if fileStatus == cOP.file:
+                        if fileStatus == cOP.FILE:
                             # receiving file name
                             fileName = self.clientSock.recv(1024)
                             fileName = self.decrypt_data(fileName)
@@ -1264,7 +1272,7 @@ class TCPClient:
                             transferVar = True
                             
                     # download complete
-                    elif answ == cOP.rst:
+                    elif answ == cOP.RST:
                         self.print_log('package download complete')
                         transferDone = True
                         self.clientSock.close()
@@ -1287,7 +1295,7 @@ class TCPClient:
         self.key, self.iv = self.setup_encryption(self.clientSock)
         # request to list available packages
         self.print_log(f'listing available packages from [{self.serverAddr}]::[{self.serverPort}]')
-        self.clientSock.send(self.encrypt_data(cOP.listall))
+        self.clientSock.send(self.encrypt_data(cOP.LISTALL))
         time.sleep(self.time_buffer)
         
         # sending user token for authentification
@@ -1349,7 +1357,7 @@ class TCPClient:
         self.key, self.iv = self.setup_encryption(self.clientSock)
         # request package search
         self.print_log(f"searching available package from [{self.serverAddr}]::[{self.serverPort}]")
-        self.clientSock.send(self.encrypt_data(cOP.search))
+        self.clientSock.send(self.encrypt_data(cOP.SEARCH))
         time.sleep(self.time_buffer)
         
         # sending authentifiction token
