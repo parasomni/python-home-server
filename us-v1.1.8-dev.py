@@ -26,6 +26,35 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
 
+# checks if directory exists or needs to be created
+def check_dir(dirPath):
+    if os.path.exists(str(dirPath)):
+        pass
+    else:
+        os.makedirs(dirPath)
+
+# debug class
+class Debug:
+    def __init__(self, enabled=True):
+        self.enabled = enabled
+    
+    def debug(self, message):
+        if self.enabled:
+            debug_message = f"[DEBUG]: {message}"
+            print(debug_message)
+            self.write_log(debug_message)
+
+    def write_log(self, message):
+        current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        log = f'[{current_date_time}] {message}'
+        current_date_time = datetime.now().strftime('%Y-%m-%d')
+        check_dir("/etc/ultron-server/debug")
+        path = f"/etc/ultron-server/debug/{current_date_time}.log"
+        with open(path, "a") as log_file:
+            log_file.write(log)
+        log_file.close()
+
+
 # class for colored output
 class colors:
     GREEN = '\033[92m'
@@ -65,11 +94,6 @@ class cOP:
     decrypt = "999" 
     search = "876"
 
-def check_dir(dirPath):
-    if os.path.exists(str(dirPath)):
-        pass
-    else:
-        os.makedirs(dirPath)
 
 # error logging
 def write_log(log):
@@ -127,7 +151,7 @@ server_version = 'v1.1.8'
 # server implementation
 class TCPServer:
     # initialize server
-    def __init__(self, host, port):
+    def __init__(self, host, port, debugger):
         # load configuration
         with open('/etc/ultron-server/server.cfg') as configFile:
             ultronConfig = configFile.read()
@@ -138,6 +162,8 @@ class TCPServer:
             if (char == comma):
                 commaPos.append(pos)
         
+        self.debugger = debugger
+
         # set configuration 
         self.client1 = str(ultronConfig[commaPos[0]+1:commaPos[1]])
         self.client2 = str(ultronConfig[commaPos[2]+1:commaPos[3]])
@@ -161,8 +187,6 @@ class TCPServer:
     def print_log(self, msg):
         current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         print(f'[{current_date_time}] {msg}')
-
-
 
     # formating of current date time for output
     def convert_date(self, timestamp):
@@ -191,31 +215,26 @@ class TCPServer:
         server_public_key = server_private_key.public_key()
         return server_public_key, server_private_key
 
-    def generate_key_iv(self):
-        key = os.urandom(32)  # Generate a 256-bit (32-byte) key
-        iv = os.urandom(16)   # Generate a 128-bit (16-byte) IV
-        return key, iv
-
     def encrypt_data(self, plaintext):
-        #print(f"[DEBUG] Plaintext before encryption: {plaintext}")
+        self.debugger.debug(f"Plaintext before encryption: {plaintext}")
         cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
         padder = padding.PKCS7(algorithms.AES.block_size).padder()
         padded_plaintext = padder.update(plaintext.encode('utf-8')) + padder.finalize()
-        #print(f"[DEBUG] Padded plaintext: {padded_plaintext}")
+        self.debugger.debug(f"Padded plaintext: {padded_plaintext}")
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
-        #print(f"[DEBUG] Ciphertext: {ciphertext}")
+        self.debugger.debug(f"Ciphertext: {ciphertext}")
         return ciphertext
 
     def decrypt_data(self, ciphertext):
-        #print(f"[DEBUG] Ciphertext before decryption: {ciphertext}")
+        self.debugger.debug(f"Ciphertext before decryption: {ciphertext}")
         cipher = Cipher(algorithms.AES(self.key), modes.CBC(self.iv), backend=default_backend())
         decryptor = cipher.decryptor()
         padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-        #print(f"[DEBUG] Padded plaintext after decryption: {padded_plaintext}")
+        self.debugger.debug(f"Padded plaintext after decryption: {padded_plaintext}")
         unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
         plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-        #print(f"[DEBUG] Plaintext after unpadding: {plaintext}")
+        self.debugger.debug(f"Plaintext after unpadding: {plaintext}")
         return plaintext.decode('utf-8')
 
     def setup_encryption(self, conn):
@@ -293,6 +312,7 @@ class TCPServer:
                 self.print_log(f'checking token integrity from {clientAddr}')
                 for i in range(num_token):
                     if valid_token[i] == clientToken:
+                        server_main_log(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} token {clientToken} invalid from {clientAddr}")
                         return True
                     elif i > num_token:
                         return False
@@ -753,7 +773,7 @@ class TCPServer:
                     time.sleep(self.time_delay)                 
                     # custom output
                     if outputType == cOP.listfs:
-                        listfs = listfs 
+                        listfs = grep 
                         listfs = self.encrypt_data(listfs)
                         fileSize = len(listfs)
                         fileSize = str(fileSize) 
@@ -968,7 +988,6 @@ class TCPServer:
                 if self.authtoken_check(clientSock, clientAddr):
                     clientSock.send(self.encrypt_data(cOP.OK))
                     log = f'closing connection to {clientAddr}: job done'
-                    server_log(userArray[userID], log)                                                                         
                     self.print_log(log)
                     clientSock.close()
                 else:
@@ -1337,27 +1356,37 @@ version: {version}"""
 # main function
 def ultron_server():
     # fetching arguments
-    if len(sys.argv) == 5 or sys.argv[1] == '--updatedb':
+    if len(sys.argv) == 5 or len(sys.argv) == 6 or sys.argv[1] == '--updatedb':
         if sys.argv[1] == "--a":
             host = sys.argv[2]
         elif sys.argv[1] == "--updatedb":
             try:
                 os.system("uc --u /ultron-server/us.py us")
                 os.system("uc --u /ultron-server/server.cfg server.cfg")
+                print("[*] Updated succesfully.")
             except Exception as error:
                 print(colors.RED, error, colors.WHITE)
-            print("updated succesfully")
+                print("[E] Update failed: ", error)
             sys.exit()
         if sys.argv[3] == "--p":
             port = sys.argv[4]
         else:
             print(f'version {server_version}\r\nusage: us --a [ADDRESS] --p [PORT]')
             sys.exit()
+        try:
+            if sys.argv[5] == "--debug":
+                print("[*] Debugging enabled")
+                debugger = Debug(enabled=True)
+            else:
+                print(f'version {server_version}\r\nusage: us --a [ADDRESS] --p [PORT]')
+                sys.exit()
+        except Exception:
+            debugger = Debug(enabled=False)
     else:
         print(f'version {server_version}\r\nusage: us --a [ADDRESS] --p [PORT]')
         sys.exit()
     # creating server object and starting ultron server
-    server = TCPServer(host, int(port))
+    server = TCPServer(host, int(port), debugger)
     server.configure_server()
     server.start_server()
 
