@@ -182,7 +182,7 @@ class cOP:
     RST = "RST"
     PACKAGE = "310"
     LISTALL = "311"
-    ENCRPYT = "000"
+    ENCRYPT = "000"
     DECRYPT = "999"
     SEARCH = "876"
     LOCK = "503"
@@ -247,8 +247,6 @@ server_log_lock = threading.Lock()
 write_log_lock = threading.Lock()
 write_log_conn_lock = threading.Lock()
 backup_client1_lock = threading.Lock()
-upload_client1_lock = threading.Lock()
-
 
 
 # server implementation
@@ -1160,92 +1158,111 @@ class TCPServer:
                 clientSock.close()
                 del self.crypt_clients_list[threading.get_ident()]
             else:
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
-                # receiving file data
-                log = f'receiving file from {clientAddr}'
-
-                server_log(userArray[userID], log)
-
-                self.print_log(log)
-                fragmentCount = 0
-                fileDir = clientSock.recv(1024)
-                fileDir = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileDir)
-                if not self.check_dir_sec(fileDir):
-                    log = f"WARNING: Detected potential security threat! {clientAddr}"
-
-                    server_main_log(log)
-
-                    clientSock.close()
-                    del self.crypt_clients_list[threading.get_ident()]
+                self.debugger.debug(
+                    f"[{threading.get_ident()}] Trying to acquire lock")
+                if backup_client1_lock.acquire(blocking=False):
+                    self.debugger.debug(
+                        f"[{threading.get_ident()}] Trying to acquire lock done")
+                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                 else:
-                    checkDir = self.fetch_dir(fileDir)
-                    if checkDir == 'not available':
-                        pass
-                    else:
-                        self.check_dir(userArray[userID] + checkDir)
-                    log = f'recieved filedirectory from {clientAddr}'
+                    self.debugger.debug(
+                        f"[{threading.get_ident()}] Waiting for client lock")
+                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.LOCK))
+                    backup_client1_lock.acquire()
+                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                try:                # receiving file data
+                    log = f'receiving file from {clientAddr}'
 
                     server_log(userArray[userID], log)
 
                     self.print_log(log)
-                    fileData = b''
-                    time.sleep(self.time_delay)
-                    filesize = clientSock.recv(1024)
-                    filesize = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], filesize)
+                    fragmentCount = 0
+                    fileDir = clientSock.recv(1024)
+                    fileDir = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileDir)
+                    if not self.check_dir_sec(fileDir):
+                        log = f"WARNING: Detected potential security threat! {clientAddr}"
 
-                    filesize = int(filesize)
-                    log = f'recieved filesize from {clientAddr}'
+                        server_main_log(log)
 
-                    server_log(userArray[userID], log)
-
-                    self.print_log(log)
-                    recieved = False
-                    if filesize > 1448:
-                        fragmentCount = filesize / 1448
-                        fragmentCount += 2
+                        clientSock.close()
+                        del self.crypt_clients_list[threading.get_ident()]
                     else:
-                        fragmentCount = 1
-                    for i in range(int(fragmentCount)):
-                        fileBytes = clientSock.recv(1500)
-                        fileData += fileBytes
-                        log = f'receiving bytes: {len(fileData)}/{filesize}'
+                        checkDir = self.fetch_dir(fileDir)
+                        if checkDir == 'not available':
+                            pass
+                        else:
+                            self.check_dir(userArray[userID] + checkDir)
+                        log = f'recieved filedirectory from {clientAddr}'
 
                         server_log(userArray[userID], log)
 
                         self.print_log(log)
-                        if filesize == len(fileData):
-                            log = f'recieved bytes successfully from {clientAddr}'
+                        fileData = b''
+                        time.sleep(self.time_delay)
+                        filesize = clientSock.recv(1024)
+                        filesize = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], filesize)
+
+                        filesize = int(filesize)
+                        log = f'recieved filesize from {clientAddr}'
+
+                        server_log(userArray[userID], log)
+
+                        self.print_log(log)
+                        recieved = False
+                        if filesize > 1448:
+                            fragmentCount = filesize / 1448
+                            fragmentCount += 2
+                        else:
+                            fragmentCount = 1
+                        for i in range(int(fragmentCount)):
+                            fileBytes = clientSock.recv(1500)
+                            fileData += fileBytes
+                            log = f'receiving bytes: {len(fileData)}/{filesize}'
 
                             server_log(userArray[userID], log)
 
                             self.print_log(log)
-                            recieved = True
-                            break
-                    fileData = fileData
-                    fileData = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileData, False)
-                    filePath = userArray[userID] + fileDir
-                    with open(filePath, 'wb') as openFile:
-                        openFile.write(fileData)
-                    openFile.close()
-                    if recieved:
-                        log = f'file from {clientAddr} written to  {filePath}'
+                            if filesize == len(fileData):
+                                log = f'recieved bytes successfully from {clientAddr}'
 
-                        server_log(userArray[userID], log)
+                                server_log(userArray[userID], log)
 
-                        self.print_log(log)
-                        clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
-                        clientSock.close()
-                        del self.crypt_clients_list[threading.get_ident()]
-                    else:
-                        log = f'filesize comparison went wrong. ERROR in {filesize}=={
-                            os.path.getsize(filePath)}. closing connection to {clientAddr}'
+                                self.print_log(log)
+                                recieved = True
+                                break
+                        fileData = fileData
+                        fileData = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileData, False)
+                        filePath = userArray[userID] + fileDir
+                        with open(filePath, 'wb') as openFile:
+                            openFile.write(fileData)
+                        openFile.close()
+                        if recieved:
+                            log = f'file from {clientAddr} written to  {filePath}'
 
-                        server_log(userArray[userID], log)
+                            server_log(userArray[userID], log)
 
-                        self.print_log(log)
-                        clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
-                        clientSock.close()
-                        del self.crypt_clients_list[threading.get_ident()]
+                            self.print_log(log)
+                            clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                            clientSock.close()
+                            del self.crypt_clients_list[threading.get_ident()]
+                        else:
+                            log = f'filesize comparison went wrong. ERROR in {filesize}=={
+                                os.path.getsize(filePath)}. closing connection to {clientAddr}'
+
+                            server_log(userArray[userID], log)
+
+                            self.print_log(log)
+                            clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
+                            clientSock.close()
+                            del self.crypt_clients_list[threading.get_ident()]
+                finally:
+                    self.debugger.debug(
+                        f"[{threading.get_ident()}] Trying to release client lock")
+                    backup_client1_lock.release()
+                    self.debugger.debug(
+                        f"[{threading.get_ident()}] Trying to release client lock done")
+                    clientSock.close()
+                    del self.crypt_clients_list[threading.get_ident()]
         # token authentificaion request
         elif data == cOP.USERTOKEN:
             if self.authtoken_check(clientSock, clientAddr):

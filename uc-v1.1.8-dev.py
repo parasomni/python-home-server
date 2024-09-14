@@ -179,7 +179,7 @@ class TCPClient:
         self.currDownloadSize = 0
         self.percStatus = '0.00 %'
         self.current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.time_buffer = 0.3
+        self.time_buffer = 0.2
 
     # prints output to stdout
     def print_log(self, msg):
@@ -847,6 +847,7 @@ class TCPClient:
                 sys.exit()
 
             # analysing answer
+        self.debugger.debug(f"Received answer : {answ}")
         if answ:
             # yes
             # upload approved
@@ -860,7 +861,7 @@ class TCPClient:
             with open(userFile, 'rb') as file:
                 data = file.read()
             file.close()
-            data = self.crypt_stub.encrypt_data(True, data)
+            data = self.crypt_stub.encrypt_data(data, False)
 
             # sending filesize
             fileSize = len(data)
