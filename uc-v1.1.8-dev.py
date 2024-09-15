@@ -163,7 +163,6 @@ class TCPClient:
         self.debugger = debugger
 
         # defines file paths
-        self.keyfile = '/etc/ultron-server/key.txt'
         self.download = '/home/' + os.getlogin() + '/Documents/ultron-server/downloads/'
         self.package_path = '/etc/ultron-server/packages/'
         self.set_trigger = '/usr/bin/'
@@ -1588,8 +1587,8 @@ def client_start():
     # config variables
     tokenfile = '/etc/ultron-server/token.txt'
     token = recieve_token(tokenfile)
-    # configfile = '/etc/ultron-server/config.csv'
-    configfile = '/etc/ultron-server/debug.csv'
+    configfile = '/etc/ultron-server/config.csv'
+    #configfile = '/etc/ultron-server/debug.csv'
 
     # extract/create server configuration
     serverport = 0
