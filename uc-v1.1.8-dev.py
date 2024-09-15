@@ -245,10 +245,6 @@ class TCPClient:
             self.clientSock.close()
             sys.exit()
 
-    # encrypts data for communication
-    # encrypts data for communication
-
-
     # returns size of directory
     def get_size(self, dir1):
         total_size = 0
@@ -269,6 +265,7 @@ class TCPClient:
     # checks if some content is missing
     def end_check(self, dirSizeBefore, backupSize, destDir):
         currSize = self.get_size(destDir)
+        self.debugger.debug("end_check: dir_size[%s], backup_size[%s], dest_dir_size[%s]"%(dirSizeBefore, backupSize, currSize))
         if currSize == dirSizeBefore:
             actSize = backupSize
         else:
@@ -489,7 +486,6 @@ class TCPClient:
                         backupSize = self.crypt_stub.decrypt_data(backupSize)
                         # variables to handle download in the next step
                         dirSizeBefore = 0
-                        ogDirSize = self.get_size(self.download + downloadName)
                         pathName = None
                         transferVar = False
 
@@ -505,9 +501,11 @@ class TCPClient:
                                 transferVar = False
 
                             # transfer is still going on
+                            self.debugger.debug("[%s] Received transfer status %s"%(threading.get_ident(), answ))
                             if answ == cOP.TRANSFER or answ == cOP.FILE:
                                 # receieving directory name
                                 if answ == cOP.TRANSFER:
+                                    self.debugger.debug("[%s] Receiving pathName"%(threading.get_ident()))
                                     pathName = self.clientSock.recv(1024)
                                     pathName = self.crypt_stub.decrypt_data(pathName)
                                     fileStatus = self.clientSock.recv(1024)
@@ -522,6 +520,7 @@ class TCPClient:
                                     # receieving file name
                                     fileName = self.clientSock.recv(1024)
                                     fileName = self.crypt_stub.decrypt_data(fileName)
+                                    self.debugger.debug("[%s] Received file name %s"%(threading.get_ident(), fileName))           
                                     destDir = self.download + pathName
                                     check_dir(destDir)
                                     dirSizeBefore = self.get_size(destDir)
@@ -535,6 +534,7 @@ class TCPClient:
                                     if filesize < 1024:
                                         skip = True
                                     fileData = b''
+                                    time.sleep(self.time_buffer)
                                     self.clientSock.send(
                                         self.crypt_stub.encrypt_data(cOP.OK))
 
@@ -594,6 +594,21 @@ class TCPClient:
                                         self.crypt_stub.encrypt_data(cOP.OK))
 
                                 # transfer goes on
+                                elif fileStatus == cOP.RST:
+                                    # download finished
+                                    # checking if content is missing
+                                    if self.end_check(
+                                            dirSizeBefore, backupSize, destDir):
+                                        # all fine
+                                        self.print_log(
+                                            'job done. quitting            ')
+                                        transferDone = True
+                                        self.clientSock.close()
+                                    else:
+                                        # something is missing
+                                        self.print_log(
+                                            '\r\nERROR: end_check failed: download incomplete')
+                                        self.clientSock.close()
                                 else:
                                     transferVar = True
 
@@ -601,7 +616,7 @@ class TCPClient:
                             elif answ == cOP.RST:
                                 # checking if content is missing
                                 if self.end_check(
-                                        ogDirSize, backupSize, destDir):
+                                        dirSizeBefore, backupSize, destDir):
                                     # all fine
                                     self.print_log(
                                         'job done. quitting            ')

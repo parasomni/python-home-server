@@ -887,6 +887,7 @@ class TCPServer:
                                         self.print_log(log)
                                         status = clientSock.recv(16)
                                         status = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], status)
+                                        self.debugger.debug("[%s] Received status %s"%(threading.get_ident(), status))
                                         if status == cOP.OK:
                                             log = f'sending bytes to {clientAddr}'
 
@@ -922,15 +923,16 @@ class TCPServer:
                                             clientSock.close()
                                             del self.crypt_clients_list[threading.get_ident()]
                                             break
+                                        
                                 # request completed
                                 f'operation completed for client {clientAddr}'
-
                                 server_log(userArray[userID], log)
-
                                 self.print_log(log)
                                 done = True
                                 clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
-                                break
+                                clientSock.close()
+                                del self.crypt_clients_list[threading.get_ident()]
+                                
                 # wrong operand choosen from client
                 else:
                     clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
