@@ -42,10 +42,10 @@ def token_gen():
             sys.exit("\r\n")
     return token
      
-key_path = os.getcwd() + '/key.txt'
 token_path = os.getcwd() + '/token.txt'
 ultron_path = '/etc/ultron-server/'
-client_file = 'uc-v1.1.7-stable.py'
+server_file = 'us-v1.1.8-stable.py'
+client_file = 'uc-v1.1.8-stable.py'
 valid_tokens = '/etc/ultron-server/valid-tokens.txt'
 token = '' 
 
@@ -75,19 +75,6 @@ def install_server():
             text_output.update()
         
         def server_setup():
-            if os.path.exists(key_path):
-                os.system(f'mv {key_path} {ultron_path}prvt.key')
-                update_text(f'moving {key_path} to {ultron_path}.prvt.key')
-            elif os.path.exists(ultron_path + 'prvt.key'):
-                update_text(f'private key found: {ultron_path}prvt.key')
-                pass
-            else:
-                key = Fernet.generate_key()
-                update_text('private key generated')
-                with open(ultron_path + 'prvt.key', 'wb') as file:
-                    file.write(key)
-                file.close()
-                update_text(f'private key written to {ultron_path}prvt.key')
             if os.path.exists(token_path):
                 update_text(f"token found: moving {token_path} to {ultron_path}token.txt")                                
                 os.system(f'mv {token_path} {ultron_path}token.txt')
@@ -120,10 +107,7 @@ def install_server():
                     ,{client3},
             
             
-            ## server assets
-            # Indicates the private key
-                    ,/etc/ultron-server/prvt.key,
-            
+            ## server assets       
             # Indicates the vaild token file path
                     ,/etc/ultron-server/valid-tokens.txt,
             
@@ -152,7 +136,7 @@ def install_server():
             update_text(config)
             update_text('setting up triggers')
             try:
-                os.system(f'mv {client_file} /usr/bin/us')
+                os.system(f'mv {server_file} /usr/bin/us')
                 os.system('chmod +x /usr/bin/us')
                 update_text("successfully installed ultron-server!")
             except Exception as e:
@@ -279,21 +263,7 @@ def install_client():
         text_output.config(state=tk.DISABLED)
         text_output.update()
 
-    def client_setup():
-        if os.path.exists(key_path):
-            try:
-                os.system(f'mv {key_path} {ultron_path}key.txt')
-                update_text(f"moving {key_path} to {ultron_path}key.txt")
-            except Exception as e:
-                update_text(e)
-                
-        else:
-            key = Fernet.generate_key()
-            update_text("private key generated")
-            with open(ultron_path + 'key.txt', 'wb') as file:
-                file.write(key)
-            update_text(f'private key written to {ultron_path}key.txt')
-            
+    def client_setup():    
         if os.path.exists(token_path):
             try:
                 os.system(f'mv {token_path} {ultron_path}token.txt')
@@ -406,7 +376,7 @@ Please be aware that there is no possibility to restore any files after proceedi
         window.mainloop()        
 
 def start_wizard():
-    info = """Installation Wizard version 1.0.2
+    info = """Installation Wizard version 1.0.3
     
 Welcome to the guided installation process for the file-sharing server named ultron-server. 
 Kindly proceed by selecting your desired option.."""
@@ -425,4 +395,6 @@ Kindly proceed by selecting your desired option.."""
     label.grid(row=0, column=0, sticky="nsew")
     window.mainloop()
     
-start_wizard()
+    
+if __name__ in '__main__':
+    start_wizard()
