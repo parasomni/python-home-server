@@ -6,28 +6,26 @@ This python-home-server called "ultron-server" is a simple command line server. 
 
 # Setup:
 
-## 1. Download the necessary files
-
-At first fetch the files from the python-home-server repository:
+## 1. Clone the repository
 
     git clone https://github.com/rysecx/python-home-server && cd python-home-server
 
 
 ## 2. Server setup
 
- To setup the server on a device run the following code:
+ To setup the server on a device run the installation wizard:
 
     sudo python3 installation-wizard.py
 
-  The program generates the private key for the encryption and a user token for authentification. The generated user token is added to the *valid-tokens.txt* file where all valid users are stored in.
+  The program generates a user token for authentification and adds it to the *valid-tokens.txt* file where all valid users are stored in.
 
-  NOTE: The encryption key and user token have to be copied in the same directory where the installation-wizard is located! Otherwise the client setup will generate a new encryption key and user token.
+  NOTE: The user token has to be copied to the same directory where the installation-wizard is located if one already exists! Otherwise the client setup will generate a new user token.
 
   You can now start the server:  
   
     sudo us --a [ADDRESS] --p [PORT]
 
-  The server creates an *err_log.txt* file for errors occurred during runtime and a *conn_log.txt* file for logging incoming connections.
+  The server creates a *err_log.txt* file for errors occurred during runtime and a *conn_log.txt* file for logging incoming connections.
 
   You can run ultron-server as background daemon when using systemd by running the following instructions:
    
@@ -43,7 +41,7 @@ At first fetch the files from the python-home-server repository:
 
 ## 3. Client setup
 
-To setup the client on a device run the following code:
+To setup the client run once again the installation wizard:
 
     sudo python3 installation-wizard.py
 
