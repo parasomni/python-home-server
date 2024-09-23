@@ -3,7 +3,7 @@ Description=Ultron Server
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /usr/bin/us --a [ADDRESS] --p [PORT]
+ExecStart=/usr/bin/python3 /usr/bin/us --a [ADDRESS] --p [PORT] --debug
 Restart=always
 User=root
 Group=root
