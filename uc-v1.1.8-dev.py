@@ -120,7 +120,7 @@ class EncryptionStub:
         if text:
             return plaintext.decode('utf-8')
         return plaintext
-    
+
     def setup_encryption(self, conn):
         self.debugger.debug(f"[{threading.get_ident()}] Start of encryption setup")
         server_public_bytes = conn.recv(1024)
@@ -147,7 +147,7 @@ class EncryptionStub:
         ).derive(shared_secret)
         self.key = derived_key[:32]
         self.iv = derived_key[32:48]
-        
+
 
 # client implementation
 
@@ -158,7 +158,7 @@ class TCPClient:
         # defines address and port
         self.serverAddr = host
         self.serverPort = port
-        
+
         self.crypt_stub = EncryptionStub(debugger)
         self.debugger = debugger
 
@@ -519,7 +519,7 @@ class TCPClient:
                                     # receieving file name
                                     fileName = self.clientSock.recv(1024)
                                     fileName = self.crypt_stub.decrypt_data(fileName)
-                                    self.debugger.debug("[%s] Received file name %s"%(threading.get_ident(), fileName))           
+                                    self.debugger.debug("[%s] Received file name %s"%(threading.get_ident(), fileName))
                                     destDir = self.download + pathName
                                     check_dir(destDir)
                                     dirSizeBefore = self.get_size(destDir)
@@ -844,7 +844,7 @@ class TCPClient:
         # receiving ansewer from server
         answ = self.clientSock.recv(16)
         answ = self.crypt_stub.decrypt_data(answ)
-        
+
             # trying to acquire write access to the client data
         if answ == cOP.LOCK:
                 self.print_log(
@@ -1099,12 +1099,12 @@ class TCPClient:
                         # sending fileOperand
                         time.sleep(self.time_buffer)
                         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.FILE))
-                        
+
                         answ = self.clientSock.recv(16)
                         answ = self.crypt_stub.decrypt_data(answ)
-                        
+
                         if answ != cOP.OK:
-                            self.print_log("ERROR: failed to sent file: ", answ) 
+                            self.print_log("ERROR: failed to sent file: ", answ)
                         else:
                             # sending fileName
                             fileNameEncr = str(fileName)
@@ -1457,7 +1457,6 @@ class TCPClient:
 
     # removes package from system
     def remove(self, package):
-        self.crypt_stub.setup_encryption(self.clientSock)
         try:
             shutil.rmtree(self.package_path + package)
             os.remove("/usr/bin/" + package)
