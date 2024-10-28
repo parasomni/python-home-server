@@ -91,32 +91,32 @@ class EncryptionStub:
     def encrypt_data(self, plaintext, text=True):
         if text:
             plaintext = plaintext.encode('utf-8')
-        self.debugger.debug(f"Plaintext before encryption: {plaintext}")
+        #self.debugger.debug(f"Plaintext before encryption: {plaintext}")
         cipher = Cipher(
             algorithms.AES(
                 self.key), modes.CBC(
                 self.iv), backend=default_backend())
         padder = padding.PKCS7(algorithms.AES.block_size).padder()
         padded_plaintext = padder.update(plaintext) + padder.finalize()
-        self.debugger.debug(f"Padded plaintext: {padded_plaintext}")
+        #self.debugger.debug(f"Padded plaintext: {padded_plaintext}")
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
-        self.debugger.debug(f"Ciphertext: {ciphertext}")
+        #self.debugger.debug(f"Ciphertext: {ciphertext}")
         return ciphertext
 
     def decrypt_data(self, ciphertext, text=True):
-        self.debugger.debug(f"Ciphertext before decryption: {ciphertext}")
+        #self.debugger.debug(f"Ciphertext before decryption: {ciphertext}")
         cipher = Cipher(
             algorithms.AES(
                 self.key), modes.CBC(
                 self.iv), backend=default_backend())
         decryptor = cipher.decryptor()
         padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-        self.debugger.debug(
-            f"Padded plaintext after decryption: {padded_plaintext}")
+        #self.debugger.debug(
+        #    f"Padded plaintext after decryption: {padded_plaintext}")
         unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
         plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-        self.debugger.debug(f"Plaintext after unpadding: {plaintext}")
+        #self.debugger.debug(f"Plaintext after unpadding: {plaintext}")
         if text:
             return plaintext.decode('utf-8')
         return plaintext
@@ -373,6 +373,7 @@ class TCPClient:
 
         # authentication
         # sending client token
+        self.debugger.debug("sending client token.")
         clientToken = clientToken
         clientToken = self.crypt_stub.encrypt_data(clientToken)
         self.clientSock.send(clientToken)
@@ -385,12 +386,14 @@ class TCPClient:
             # downloading file
             if downloadType == 0:
                 # sending file operand
+                self.debugger.debug("sending file operand.")
                 self.clientSock.send(self.crypt_stub.encrypt_data(cOP.FILE))
                 answ = self.clientSock.recv(16)
                 answ = self.crypt_stub.decrypt_data(answ)
                 if answ == cOP.OK:
                     # transfer accepted
                     # sendig filename
+                    self.debugger.debug("sending filename.")
                     fileNameEncr = downloadName
                     fileNameEncr = self.crypt_stub.encrypt_data(fileNameEncr)
                     self.clientSock.send(fileNameEncr)
@@ -399,9 +402,9 @@ class TCPClient:
                     if resp == cOP.OK:
                         skip = False
                         # sending filesize
+                        self.debugger.debug("receiving filesize.")
                         filesize = self.clientSock.recv(1024)
                         filesize = self.crypt_stub.decrypt_data(filesize)
-                        filesize = filesize()
                         filesize = int(filesize)
 
                         # checking size of file
@@ -412,6 +415,7 @@ class TCPClient:
 
                         # if filesize higher than 1024, algorithm fetches all
                         # packages
+                        self.debugger.debug("receiving bytes.")
                         while True:
                             if skip == True:
                                 fileBytes = self.clientSock.recv(filesize)
@@ -426,11 +430,13 @@ class TCPClient:
                                 pass
 
                         # decoding and decrypting content from server
+                        self.debugger.debug("decrypting bytes.")
                         fileData = fileData
                         fileData = self.crypt_stub.decrypt_data(fileData, False)
                         download = self.download + downloadName
 
                         # writing download to file
+                        self.debugger.debug("writing file.")
                         check_dir(self.download)
                         with open(download, 'wb') as file:
                             file.write(fileData)
@@ -1145,7 +1151,7 @@ class TCPClient:
                             self.clientSock.send(fileBytesSize)
                             time.sleep(self.time_buffer)
                             self.debugger.debug(f"sending filebytes {fileBytes}")
-                            self.clientSock.send(fileBytes)
+                            self.clientSock.sendall(fileBytes)
                             time.sleep(self.time_buffer)
 
                             # waiting for OK from server
