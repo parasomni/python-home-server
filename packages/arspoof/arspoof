@@ -9,7 +9,7 @@ import threading
 
 try:
     import scapy.all as scapy
-except Excption as e:
+except Exception as e:
     sys.exit("ERROR: Module missing: scapy. Install with > pip install scapy <")
 
 
