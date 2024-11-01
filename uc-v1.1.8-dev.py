@@ -1428,7 +1428,7 @@ class TCPClient:
         # receiving answer
         answ = self.clientSock.recv(16)
         answ = self.crypt_stub.decrypt_data(answ)
-        endData = ''
+        endData = b''
 
         # analysing answer
         if answ == cOP.OK:

