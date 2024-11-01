@@ -339,9 +339,9 @@ class TCPClient:
         self.crypt_stub.setup_encryption(self.clientSock)
 
         self.print_log(
-            f'requesting ping from [{
+            f'''requesting ping from [{
                 self.serverAddr}]::[{
-                self.serverPort}]')
+                self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.PING))
         answ = self.clientSock.recv(16)
         ping = self.crypt_stub.decrypt_data(answ)
@@ -365,9 +365,9 @@ class TCPClient:
 
         # requesting transfer
         self.print_log(
-            f'requesting transfer from [{
+            f'''requesting transfer from [{
                 self.serverAddr}]::[{
-                self.serverPort}]')
+                self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.DOWNLOAD))
         time.sleep(self.time_buffer)
 
@@ -449,9 +449,9 @@ class TCPClient:
                     # closing socket if file could not be found
                     elif resp == cOP.RST:
                         self.print_log(
-                            f'file_not_found_error: closing connection to [{
+                            f'''file_not_found_error: closing connection to [{
                                 self.serverAddr}]::[{
-                                self.serverPort}]')
+                                self.serverPort}]''')
                         self.clientSock.close()
 
                 # closing socket if selected operand is not available
@@ -643,9 +643,9 @@ class TCPClient:
                     # directory not found
                     else:
                         self.print_log(
-                            f'directory_not_found_error: closing connection to [{
+                            f'''directory_not_found_error: closing connection to [{
                                 self.serverAddr}]::[{
-                                self.serverPort}]')
+                                self.serverPort}]''')
                         self.clientSock.close()
 
         # authentification failure
@@ -666,9 +666,9 @@ class TCPClient:
 
         # requesting list and sending operand
         self.print_log(
-            f'requesting listfs from [{
+            f'''requesting listfs from [{
                 self.serverAddr}]::[{
-                self.serverPort}]')
+                self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.LISTFS))
         time.sleep(self.time_buffer)
 
@@ -686,9 +686,9 @@ class TCPClient:
             # no
             # closing socket
             self.print_log(
-                f'connection refused by [{
+                f'''connection refused by [{
                     self.serverAddr}]::[{
-                    self.serverPort}]')
+                    self.serverPort}]''')
             self.clientSock.close()
         elif answ == cOP.OK:
             # yes
@@ -740,9 +740,9 @@ class TCPClient:
                 file.close()
                 space = 120 * " "
                 self.print_log(
-                    f'filesystem written to {
+                    f'''filesystem written to {
                         self.download +
-                        oFile}{space}')
+                        oFile}{space}''')
 
             # sending operation done and closing socket
             self.clientSock.send(self.crypt_stub.encrypt_data(cOP.OK))
@@ -755,9 +755,9 @@ class TCPClient:
 
         # requesting token validation
         self.print_log(
-            f'requesting token validation from [{
+            f'''requesting token validation from [{
                 self.serverAddr}]::[{
-                self.serverPort}]')
+                self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.USERTOKEN))
         time.sleep(self.time_buffer)
 
@@ -794,9 +794,9 @@ class TCPClient:
 
         # requesting update
         self.print_log(
-            f'updating uc from [{
+            f'''updating uc from [{
                 self.serverAddr}]::[{
-                self.serverPort}]')
+                self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.SERVERUPDATE))
 
         # receieving file size
@@ -836,9 +836,9 @@ class TCPClient:
         # requesting file upload
         current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.print_log(
-            f'requesting file transfer from [{
-                self.serverAddr}]::[{
-                self.serverPort}]')
+            f'''requesting file transfer from [{
+            self.serverAddr}]::[{
+            self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.UPLOAD))
         time.sleep(self.time_buffer)
 
@@ -915,9 +915,9 @@ class TCPClient:
 
         # sending request to server
         self.print_log(
-            f'requesting removal from [{
+            f'''requesting removal from [{
                 self.serverAddr}]::[{
-                self.serverPort}]')
+                self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.REMOVE))
         time.sleep(self.time_buffer)
 
@@ -1024,9 +1024,9 @@ class TCPClient:
             # requesting file transfer
             sentBytes = 0
             self.print_log(
-                f'requesting file transfer from [{
-                    self.serverAddr}]::[{
-                    self.serverPort}]')
+                f'''requesting file transfer from [{
+                self.serverAddr}]::[{
+                self.serverPort}]''')
             self.clientSock.send(self.crypt_stub.encrypt_data(cOP.BACKUP))
             time.sleep(self.time_buffer)
 
@@ -1253,9 +1253,9 @@ class TCPClient:
 
         # request package from server
         self.print_log(
-            f'installing package from [{
-                self.serverAddr}]::[{
-                self.serverPort}]')
+            f'''installing package from [{
+            self.serverAddr}]::[{
+            self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.PACKAGE))
         time.sleep(self.time_buffer)
 
@@ -1414,9 +1414,9 @@ class TCPClient:
         self.crypt_stub.setup_encryption(self.clientSock)
         # request to list available packages
         self.print_log(
-            f'listing available packages from [{
-                self.serverAddr}]::[{
-                self.serverPort}]')
+            f'''listing available packages from [{
+            self.serverAddr}]::[{
+            self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.LISTALL))
         time.sleep(self.time_buffer)
 
@@ -1470,16 +1470,16 @@ class TCPClient:
         except PermissionError:
             self.print_log('ERROR: Permission denied. Are you root?')
         except Exception as e:
-            self.print_log(f'ERROR: {package} package not found.')
+            self.print_log(f'ERROR: {e}: {package} package not found.')
 
     # script to return if package is available
     def search(self, userToken, package):
         self.crypt_stub.setup_encryption(self.clientSock)
         # request package search
         self.print_log(
-            f"searching available package from [{
-                self.serverAddr}]::[{
-                self.serverPort}]")
+            f'''searching available package from [{
+            self.serverAddr}]::[{
+            self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.SEARCH))
         time.sleep(self.time_buffer)
 
