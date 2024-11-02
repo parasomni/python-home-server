@@ -1289,6 +1289,7 @@ class TCPClient:
                 check_dir(self.package_path + package + '/')
 
                 # receive package size
+                self.debugger.debug("receiving package size")
                 pkgsize = self.clientSock.recv(1024)
                 pkgsize = self.crypt_stub.decrypt_data(pkgsize)
 
@@ -1300,26 +1301,33 @@ class TCPClient:
                 h = 4
 
                 # handling transfer
+                self.debugger.debug("handling transfer")
                 while not transferDone:
 
                     # receive status from server
+                    self.debugger.debug("receiving status from server")
                     if not transferVar:
                         answ = self.clientSock.recv(16)
-                        self.crypt_stub.decrypt_data(answ)
+                        self.debugger.debug("received status: %s"%(answ))
+                        answ = self.crypt_stub.decrypt_data(answ)
 
                     # set transfer to ongoing
                     else:
+                        self.debugger.debug("setting transfer to ongoing")
                         answ = cOP.TRANSFER
                         transferVar = False
 
                     # transfer ongoing
+                    self.debugger.debug("answer received: %s"%(answ))
                     if answ == cOP.TRANSFER or answ == cOP.FILE:
 
                         # receiving path name for package
                         if answ == cOP.TRANSFER:
+                            self.debugger.debug("receiving pathName")
                             pathName = self.clientSock.recv(1024)
                             pathName = self.crypt_stub.decrypt_data(pathName)
                             check_dir('/etc/' + pathName)
+                            self.debugger.debug("receiving file status")
                             fileStatus = self.clientSock.recv(1024)
                             fileStatus = self.crypt_stub.decrypt_data(fileStatus)
 
@@ -1330,6 +1338,7 @@ class TCPClient:
                         # handling file
                         if fileStatus == cOP.FILE:
                             # receiving file name
+                            self.debugger.debug("receiving file name")
                             fileName = self.clientSock.recv(1024)
                             fileName = self.crypt_stub.decrypt_data(fileName)
 
@@ -1340,6 +1349,7 @@ class TCPClient:
                             dirSizeBefore = self.get_size(destDir)
 
                             # receive file size
+                            self.debugger.debug("receiving file size")
                             filesize = self.clientSock.recv(1024)
                             filesize = self.crypt_stub.decrypt_data(filesize)
 
@@ -1351,6 +1361,7 @@ class TCPClient:
                             self.clientSock.send(self.crypt_stub.encrypt_data(cOP.OK))
 
                             # receive file bytes
+                            self.debugger.debug("receiving file bytes")
                             while True:
                                 fileBytes = self.clientSock.recv(1024)
                                 fileData += fileBytes
@@ -1374,6 +1385,7 @@ class TCPClient:
                                     pass
 
                             # decrypt file data
+                            self.debugger.debug("decrypting file data")
                             fileData = fileData
                             fileData = self.crypt_stub.decrypt_data(fileData, False)
 
