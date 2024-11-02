@@ -1145,7 +1145,7 @@ class TCPServer:
             pass
         # client update request
         elif data == cOP.SERVERUPDATE:
-            with open(self.client1 + 'ultron-server/uc', 'r') as file:
+            with open(self.client1 + '/ultron-server/uc', 'r') as file:
                 data = file.read()
             file.close()
             data = data
