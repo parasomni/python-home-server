@@ -1238,17 +1238,20 @@ class TCPClient:
             # copies file to binaries /usr/bin
             package_path_complete = self.package_path + package + '/'
             setup_path = package_path_complete + 'setup.py'
-            self.print_log('installing triggers')
-            shutil.copy(package_path_complete + package, '/usr/bin/' + package)
-
-            # sets file to executable
-            os.system(f'chmod +x /usr/bin/{package}')
-
             # runs setup script if available
             if os.path.exists(setup_path):
                 self.print_log('running setup.py')
                 os.system('python3 ' + setup_path)
             else:
+                pass
+
+            self.print_log('installing triggers')
+            try:
+                shutil.copy(package_path_complete + package, '/usr/bin/' + package)
+                # sets file to executable
+                os.system(f'chmod +x /usr/bin/{package}')
+            except Exception as e:
+                self.print_log(f'ERROR: {e}')
                 pass
 
         # request package from server
