@@ -767,7 +767,7 @@ class TCPClient:
         self.clientSock.send(clientToken)
 
         # revceiving answer from server
-        integrity = self.clientSock.recv(1024)
+        integrity = self.crypt_stub.decrypt_data(self.clientSock.recv(1024))
 
         # token valid?
         if integrity == cOP.OK:

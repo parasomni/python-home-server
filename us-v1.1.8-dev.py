@@ -367,10 +367,10 @@ class TCPServer:
         self.print_log(f'checking token integrity from {clientAddr}')
         for i in range(num_token):
             if valid_token[i] == clientToken:
-
+                server_main_log_lock.acquire()
                 server_main_log(
                     f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} token {clientToken} invalid from {clientAddr}")
-                server_main_lock.release()
+                server_main_log_lock.release()
                 return True
             elif i > num_token:
                 return False
