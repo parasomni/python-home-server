@@ -44,8 +44,8 @@ def token_gen():
 
 token_path = os.getcwd() + '/token.txt'
 ultron_path = '/etc/ultron-server/'
-server_file = 'us-v1.1.8-stable.py'
-client_file = 'uc-v1.1.8-stable.py'
+server_file = 'us-*'
+client_file = 'uc-*'
 valid_tokens = '/etc/ultron-server/valid-tokens.txt'
 token = ''
 
