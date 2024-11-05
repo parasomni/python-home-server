@@ -1,41 +1,41 @@
 #!/usr/bin/python3
 # version 1.1.8
 
+import os
+import shutil
+import smtplib
 # import required modules
 import socket
 import subprocess
-import shutil
-import smtplib
 import sys
 import threading
-import os
 import time
-
 from datetime import datetime
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.backends import default_backend
-from http import client
 from email import encoders
-from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from http import client
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, padding, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 
-# checks if directory exists or needs to be created
 def check_dir(dirPath):
+    """checks if directory exists or needs to be created
+    """
     if os.path.exists(str(dirPath)):
         pass
     else:
         os.makedirs(dirPath)
 
 
-# debug class
 class Debug:
+    """debug class
+    """
     def __init__(self, enabled=True):
         self.enabled = enabled
 
@@ -56,8 +56,9 @@ class Debug:
         log_file.close()
 
 
-# encryption stub
 class EncryptionStub:
+    """encryption stub
+    """
     def __init__(self, debugger):
         self.debugger = debugger
 
@@ -107,7 +108,7 @@ class EncryptionStub:
         if text:
             return plaintext.decode('utf-8')
         return plaintext
-    
+
     def setup_encryption(self, conn):
         self.debugger.debug(
             f"[{threading.get_ident()}] Start of encryption setup")
@@ -152,9 +153,9 @@ class EncryptionStub:
         return key, iv
 
 
-
-# class for colored output
 class colors:
+    """class for colored output
+    """
     GREEN = '\033[92m'
     RED = '\033[91m'
     WHITE = '\033[97m'
@@ -162,8 +163,9 @@ class colors:
     BLUE = '\033[94m'
 
 
-# necessary oparands for communication between client and server
 class cOP:
+    """necessary oparands for communication between client and server
+    """
     FILE = "334"
     DIR = "336"
     TRANSFER = "340"
@@ -188,38 +190,47 @@ class cOP:
     LOCK = "503"
 
 
-# error logging
 def write_log(log):
+    """error logging
+    """
     current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     log = f'[{current_date_time}] {log}'
     with open('/etc/ultron-server/err_log.txt', 'a') as errFile:
         errFile.write(str(log) + '\r\n')
     errFile.close()
 
-# connection logging
+
 def write_logcon(log):
+    """connection logging
+    """
     with open('/etc/ultron-server/conn_log.txt', 'a') as logFile:
         logFile.write(str(log) + '\r\n')
     logFile.close()
 
-# DDoS logging
+
 def write_ddos_log(log):
+    """DDoS logging
+    """
     with open('/etc/ultron-server/ddos_log.txt', 'a') as logFile:
         logFile.write(str(log) + '\r\n')
     logFile.close()
+
 
 def write_crypt_key(key):
     with open('password.txt', 'w') as keyFile:
         keyFile.write(key)
     keyFile.close()
 
+
 def write_crypt_dir(dir):
     with open('directory.txt', 'w') as dirFile:
         dirFile.write(dir)
     dirFile.close()
 
-# log client actions
+
 def server_log(client, log):
+    """log client actions
+    """
     date = datetime.now().strftime('%Y%m%d')
     client_server_path = '/etc/ultron-server/' + client.split('/')[-1]
     check_dir(client_server_path)
@@ -227,8 +238,10 @@ def server_log(client, log):
         log_file.write(str(log) + '\r\n')
     log_file.close()
 
-# server main log
+
 def server_main_log(log):
+    """server main log
+    """
     server_main_log_path = '/etc/ultron-server/main-logs/'
     date = datetime.now().strftime('%Y%m%d')
     current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -249,8 +262,9 @@ write_log_conn_lock = threading.Lock()
 backup_client1_lock = threading.Lock()
 
 
-# server implementation
 class TCPServer:
+    """server implementation
+    """
     # initialize server
     def __init__(self, host, port, debugger):
         # load configuration
@@ -286,7 +300,6 @@ class TCPServer:
         self.ddos_protection_active = False
         self.key = 0
         self.iv = 0
-
 
     # print log to stdout
     def print_log(self, msg):
@@ -369,7 +382,8 @@ class TCPServer:
             if valid_token[i] == clientToken:
                 server_main_log_lock.acquire()
                 server_main_log(
-                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} token {clientToken} invalid from {clientAddr}")
+                    f'''{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                    token {clientToken} invalid from {clientAddr}''')
                 server_main_log_lock.release()
                 return True
             elif i > num_token:
@@ -379,7 +393,10 @@ class TCPServer:
     def user_config(self, clientSock, clientAddr):
         # token verification
         clientToken = clientSock.recv(1024)
-        clientToken = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], clientToken)
+        clientToken = self.crypt_stub.decrypt_data(
+            self.crypt_clients_list[threading.get_ident()][0],
+            self.crypt_clients_list[threading.get_ident()][1],
+            clientToken)
         clientToken = clientToken[0:30]
         self.print_log(f'fetching token from db for {clientAddr}')
         with open(self.validtoken, "r") as vtFile:
@@ -423,22 +440,34 @@ class TCPServer:
     def handle_file(self, clientSock, clientAddr, fileDirectory):
         self.debugger.debug(
             f"[{threading.get_ident()}] Start of file transfer")
-        clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+        clientSock.send(self.crypt_stub.encrypt_data(
+            self.crypt_clients_list[threading.get_ident()][0],
+            self.crypt_clients_list[threading.get_ident()][1],
+            cOP.OK))
         self.print_log(f'receiving file-info from {clientAddr}')
 
         # receiving fileName
         fileName = clientSock.recv(1024)
-        fileName = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileName)
+        fileName = self.crypt_stub.decrypt_data(
+            self.crypt_clients_list[threading.get_ident()][0],
+            self.crypt_clients_list[threading.get_ident()][1],
+            fileName)
         fileFormat = fileName[-4:]
         self.print_log(f'received fileName {fileName} from {clientAddr}')
         # receiving fileSize
         fileSize = clientSock.recv(1024)
-        fileSize = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileSize)
+        fileSize = self.crypt_stub.decrypt_data(
+            self.crypt_clients_list[threading.get_ident()][0],
+            self.crypt_clients_list[threading.get_ident()][1],
+            fileSize)
 
         self.print_log(f'received fileSize {fileSize} from {clientAddr}')
         # receiving fileBytesSize
         fileBytesSize = clientSock.recv(1024)
-        fileBytesSize = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileBytesSize)
+        fileBytesSize = self.crypt_stub.decrypt_data(
+            self.crypt_clients_list[threading.get_ident()][0],
+            self.crypt_clients_list[threading.get_ident()][1],
+            fileBytesSize)
         self.print_log(
             f'recieved fileBytesSize {fileBytesSize} from {clientAddr}')
         # receiving bytes from file
@@ -514,7 +543,10 @@ class TCPServer:
                 error = f'closing connection to {clientAddr}: invalid auth_token'
                 write_log(error)
                 self.print_log(error)
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.FORBIDDEN))
+                clientSock.send(self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1],
+                    cOP.FORBIDDEN))
                 clientSock.close()
                 del self.crypt_clients_list[threading.get_ident()]
             else:
@@ -523,15 +555,27 @@ class TCPServer:
                 if backup_client1_lock.acquire(blocking=False):
                     self.debugger.debug(
                         f"[{threading.get_ident()}] Trying to acquire lock done")
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1],
+                        cOP.OK))
                 else:
                     self.debugger.debug(
                         f"[{threading.get_ident()}] Waiting for client lock")
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.LOCK))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1],
+                        cOP.LOCK))
                     backup_client1_lock.acquire()
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1],
+                        cOP.OK))
                 try:
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1],
+                        cOP.OK))
                     log = f'preparing backup from {clientAddr}'
                     server_log(userArray[userID], log)
 
@@ -541,7 +585,10 @@ class TCPServer:
                     server_log(userArray[userID], log)
                     self.print_log(log)
                     destDir = clientSock.recv(1024)
-                    destDir = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], destDir)
+                    destDir = self.crypt_stub.decrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1],
+                        destDir)
                     if not self.check_dir_sec(destDir):
                         log = f"WARNING: Detected potential security threat! {clientAddr}"
 
@@ -558,7 +605,10 @@ class TCPServer:
 
                         self.print_log(log)
                         backupSize = clientSock.recv(2048)
-                        backupSize = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], backupSize)
+                        backupSize = self.crypt_stub.decrypt_data(
+                            self.crypt_clients_list[threading.get_ident()][0],
+                            self.crypt_clients_list[threading.get_ident()][1],
+                            backupSize)
                         log = f'receiving directory name from {clientAddr}'
 
                         server_log(userArray[userID], log)
@@ -566,7 +616,9 @@ class TCPServer:
                         self.print_log(log)
                         # getting dirSizeBefore
                         first_dir_name = clientSock.recv(2048)
-                        first_dir_name = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], 
+                        first_dir_name = self.crypt_stub.decrypt_data(
+                            self.crypt_clients_list[threading.get_ident()][0],
+                            self.crypt_clients_list[threading.get_ident()][1],
                             first_dir_name)
                         if not self.check_dir_sec(first_dir_name):
                             log = f"WARNING: Detected potential security threat! {clientAddr}"
@@ -591,7 +643,9 @@ class TCPServer:
 
                                     self.print_log(log)
                                     status = clientSock.recv(16)
-                                    status = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], 
+                                    status = self.crypt_stub.decrypt_data(
+                                        self.crypt_clients_list[threading.get_ident()][0],
+                                        self.crypt_clients_list[threading.get_ident()][1],
                                         status)
                                 else:
                                     pass
@@ -606,7 +660,9 @@ class TCPServer:
                                     self.print_log(log)
                                     # receiving directory name
                                     dirName = clientSock.recv(1024)
-                                    dirName = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], 
+                                    dirName = self.crypt_stub.decrypt_data(
+                                        self.crypt_clients_list[threading.get_ident()][0],
+                                        self.crypt_clients_list[threading.get_ident()][1],
                                         dirName)
                                     # checking Directory
                                     log = f'receiving fileRequestOperand from {clientAddr}'
@@ -618,7 +674,9 @@ class TCPServer:
 
                                     self.print_log(log)
                                     req = clientSock.recv(16)
-                                    req = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], req)
+                                    req = self.crypt_stub.decrypt_data(
+                                        self.crypt_clients_list[threading.get_ident()][0],
+                                        self.crypt_clients_list[threading.get_ident()][1], req)
                                     if req == cOP.FILE:
                                         isDir = False
                                         self.handle_file(
@@ -673,14 +731,19 @@ class TCPServer:
 
                                         self.print_log(log)
                                         clientSock.send(
-                                            self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                                            self.crypt_stub.encrypt_data(
+                                                self.crypt_clients_list[threading.get_ident()][0],
+                                                self.crypt_clients_list[threading.get_ident()][1],
+                                                cOP.OK))
                                         clientSock.close()
                                         del self.crypt_clients_list[threading.get_ident()]
                                     else:
                                         # transfer incomplete
                                         fileTransfer = False
                                         message = f'server_side_error: endCheck failed. try backup again.'
-                                        message = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], 
+                                        message = self.crypt_stub.encrypt_data(
+                                            self.crypt_clients_list[threading.get_ident()][0],
+                                            self.crypt_clients_list[threading.get_ident()][1],
                                             message)
                                         clientSock.send(message)
                                         log = f'server_side_error: close connection to {clientAddr}'
@@ -710,8 +773,6 @@ class TCPServer:
                     clientSock.close()
                     del self.crypt_clients_list[threading.get_ident()]
 
-
-
         # download request
         elif data == cOP.DOWNLOAD:
             done = False
@@ -721,19 +782,29 @@ class TCPServer:
                 error = f'closing connection to {clientAddr}: invalid auth_token'
                 write_log(error)
                 self.print_log(error)
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.FORBIDDEN))
+                clientSock.send(self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], cOP.FORBIDDEN))
                 clientSock.close()
                 del self.crypt_clients_list[threading.get_ident()]
             else:
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                clientSock.send(self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                 transferType = clientSock.recv(1024)
-                transferType = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], transferType)
+                transferType = self.crypt_stub.decrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], transferType)
                 # download file
                 if transferType == cOP.FILE:
                     # receiving file name
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                     fileName = clientSock.recv(1024)
-                    fileName = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileName)
+                    fileName = self.crypt_stub.decrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], fileName)
                     # search if file does exist
                     log = f'searching requestet file for {clientAddr}'
                     server_log(userArray[userID], log)
@@ -749,15 +820,21 @@ class TCPServer:
 
                                 self.print_log(log)
                                 # reading file data and sending to client
-                                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                                clientSock.send(self.crypt_stub.encrypt_data(
+                                    self.crypt_clients_list[threading.get_ident()][0],
+                                    self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                                 filePath = dirpath + "/" + file_name
                                 with open(filePath, 'rb') as clientFile:
                                     data = clientFile.read()
                                 clientFile.close()
-                                data = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], data, False)
+                                data = self.crypt_stub.encrypt_data(
+                                    self.crypt_clients_list[threading.get_ident()][0],
+                                    self.crypt_clients_list[threading.get_ident()][1], data, False)
                                 fileSize = len(data)
                                 fileSize = str(fileSize)
-                                fileSize = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileSize)
+                                fileSize = self.crypt_stub.encrypt_data(
+                                    self.crypt_clients_list[threading.get_ident()][0],
+                                    self.crypt_clients_list[threading.get_ident()][1], fileSize)
                                 clientSock.send(fileSize)
                                 time.sleep(self.time_delay)
                                 clientSock.send(data)
@@ -768,7 +845,9 @@ class TCPServer:
                                 self.print_log(log)
                                 resp = clientSock.recv(16)
                                 # check for data loss
-                                resp = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], resp)
+                                resp = self.crypt_stub.decrypt_data(
+                                    self.crypt_clients_list[threading.get_ident()][0],
+                                    self.crypt_clients_list[threading.get_ident()][1], resp)
                                 if resp == cOP.OK:
                                     log = f'OK recieved. closing connection to {clientAddr}'
 
@@ -792,9 +871,13 @@ class TCPServer:
                 # downloading directory
                 elif transferType == cOP.DIR:
                     # receiving directory name
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                     dirName = clientSock.recv(1024)
-                    dirName = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], dirName)
+                    dirName = self.crypt_stub.decrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], dirName)
                     # check if directory does exist
                     log = f'searching requested directory for {clientAddr}'
 
@@ -833,7 +916,9 @@ class TCPServer:
 
                                     self.print_log(log)
                                     clientSock.send(
-                                        self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.TRANSFER))
+                                        self.crypt_stub.encrypt_data(
+                                            self.crypt_clients_list[threading.get_ident()][0],
+                                            self.crypt_clients_list[threading.get_ident()][1], cOP.TRANSFER))
                                     time.sleep(self.time_delay)
                                     dirpath = dirpath + '/'
                                     vPath = self.client1
@@ -846,7 +931,9 @@ class TCPServer:
 
                                     self.print_log(log)
                                     dirpathEncr = dirpathSend
-                                    dirpathEncr = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], 
+                                    dirpathEncr = self.crypt_stub.encrypt_data(
+                                        self.crypt_clients_list[threading.get_ident()][0],
+                                        self.crypt_clients_list[threading.get_ident()][1],
                                         dirpathEncr)
                                     clientSock.send(dirpathEncr)
                                     time.sleep(self.time_delay)
@@ -858,7 +945,9 @@ class TCPServer:
 
                                         self.print_log(log)
                                         clientSock.send(
-                                            self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.FILE))
+                                            self.crypt_stub.encrypt_data(
+                                                self.crypt_clients_list[threading.get_ident()][0],
+                                                self.crypt_clients_list[threading.get_ident()][1], cOP.FILE))
                                         time.sleep(self.time_delay)
                                         # sending file
                                         log = f'sending filename to {clientAddr}'
@@ -869,7 +958,7 @@ class TCPServer:
                                         file_name_encr = file_name
                                         file_name_encr = self.crypt_stub.encrypt_data(
                                             self.crypt_clients_list[threading.get_ident()][0],
-                                            self.crypt_clients_list[threading.get_ident()][1], 
+                                            self.crypt_clients_list[threading.get_ident()][1],
                                             file_name_encr)
                                         clientSock.send(file_name_encr)
                                         time.sleep(self.time_delay)
@@ -901,7 +990,8 @@ class TCPServer:
                                         status = self.crypt_stub.decrypt_data(
                                             self.crypt_clients_list[threading.get_ident()][0],
                                             self.crypt_clients_list[threading.get_ident()][1], status)
-                                        self.debugger.debug("[%s] Received status %s"%(threading.get_ident(), status))
+                                        self.debugger.debug("[%s] Received status %s"
+                                                            % (threading.get_ident(), status))
                                         if status == cOP.OK:
                                             log = f'sending bytes to {clientAddr}'
 
@@ -930,14 +1020,13 @@ class TCPServer:
                                             pass
                                         else:
                                             log = f'no response from {clientAddr}: closing connection'
-
                                             server_log(userArray[userID], log)
 
                                             self.print_log(log)
                                             clientSock.close()
                                             del self.crypt_clients_list[threading.get_ident()]
                                             break
-                                        
+
                                 # request completed
                                 f'operation completed for client {clientAddr}'
                                 server_log(userArray[userID], log)
@@ -948,7 +1037,7 @@ class TCPServer:
                                     self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
                                 clientSock.close()
                                 del self.crypt_clients_list[threading.get_ident()]
-                                
+
                 # wrong operand choosen from client
                 else:
                     clientSock.send(self.crypt_stub.encrypt_data(
@@ -1041,8 +1130,7 @@ class TCPServer:
                     clientSock.send(grep)
                 # wrong operand choosen by client
                 else:
-                    log = f'recieved wrong operand'
-
+                    log = 'recieved wrong operand'
                     server_log(userArray[userID], log)
 
                     self.print_log(log)
@@ -1393,11 +1481,15 @@ class TCPServer:
                     server_log(userArray[userID], log)
 
                     self.print_log(log)
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                     time.sleep(self.time_delay)
                     backupSize = self.get_size(package_folder)
                     backupSize = str(backupSize)
-                    backupSize = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], backupSize)
+                    backupSize = self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], backupSize)
                     clientSock.send(backupSize)
                     time.sleep(self.time_delay)
                     for dirpath, dirnames, filenames in os.walk(
@@ -1407,7 +1499,9 @@ class TCPServer:
                         server_log(userArray[userID], log)
 
                         self.print_log(log)
-                        clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.TRANSFER))
+                        clientSock.send(self.crypt_stub.encrypt_data(
+                            self.crypt_clients_list[threading.get_ident()][0],
+                            self.crypt_clients_list[threading.get_ident()][1], cOP.TRANSFER))
                         time.sleep(self.time_delay)
                         dirpath = dirpath + '/'
                         vPath = self.client1
@@ -1419,7 +1513,9 @@ class TCPServer:
 
                         self.print_log(log)
                         dirpathEncr = dirpathSend
-                        dirpathEncr = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], dirpathEncr)
+                        dirpathEncr = self.crypt_stub.encrypt_data(
+                            self.crypt_clients_list[threading.get_ident()][0],
+                            self.crypt_clients_list[threading.get_ident()][1], dirpathEncr)
                         clientSock.send(dirpathEncr)
                         time.sleep(self.time_delay)
                         for file_name in filenames:
@@ -1428,7 +1524,9 @@ class TCPServer:
                             server_log(userArray[userID], log)
 
                             self.print_log(log)
-                            clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.FILE))
+                            clientSock.send(self.crypt_stub.encrypt_data(
+                                self.crypt_clients_list[threading.get_ident()][0],
+                                self.crypt_clients_list[threading.get_ident()][1], cOP.FILE))
                             time.sleep(self.time_delay)
                             log = f'sending filename to {clientAddr}'
 
@@ -1436,14 +1534,18 @@ class TCPServer:
 
                             self.print_log(log)
                             file_name_encr = file_name
-                            file_name_encr = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], file_name_encr)
+                            file_name_encr = self.crypt_stub.encrypt_data(
+                                self.crypt_clients_list[threading.get_ident()][0],
+                                self.crypt_clients_list[threading.get_ident()][1], file_name_encr)
                             clientSock.send(file_name_encr)
                             time.sleep(self.time_delay)
                             filePath = dirpath + "/" + file_name
                             with open(filePath, 'rb') as clientFile:
                                 data = clientFile.read()
                             clientFile.close()
-                            data = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], data, False)
+                            data = self.crypt_stub.encrypt_data(
+                                self.crypt_clients_list[threading.get_ident()][0],
+                                self.crypt_clients_list[threading.get_ident()][1], data, False)
                             log = f'sending filesize to {clientAddr}'
 
                             server_log(userArray[userID], log)
@@ -1451,7 +1553,9 @@ class TCPServer:
                             self.print_log(log)
                             fileSize = len(data)
                             fileSize = str(fileSize)
-                            fileSize = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], fileSize)
+                            fileSize = self.crypt_stub.encrypt_data(
+                                self.crypt_clients_list[threading.get_ident()][0],
+                                self.crypt_clients_list[threading.get_ident()][1], fileSize)
                             clientSock.send(fileSize)
                             time.sleep(self.time_delay)
                             log = f'receiving status from {clientAddr}'
@@ -1460,7 +1564,9 @@ class TCPServer:
 
                             self.print_log(log)
                             status = clientSock.recv(16)
-                            status = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], status)
+                            status = self.crypt_stub.decrypt_data(
+                                self.crypt_clients_list[threading.get_ident()][0],
+                                self.crypt_clients_list[threading.get_ident()][1], status)
                             if status == cOP.OK:
                                 log = f'sending bytes to {clientAddr}'
 
@@ -1477,7 +1583,9 @@ class TCPServer:
                             self.print_log(
                                 f'waiting for response from {clientAddr}')
                             resp = clientSock.recv(16)
-                            resp = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], resp)
+                            resp = self.crypt_stub.decrypt_data(
+                                self.crypt_clients_list[threading.get_ident()][0],
+                                self.crypt_clients_list[threading.get_ident()][1], resp)
                             if resp == cOP.OK:
                                 log = f'OK recieved from {clientAddr}'
 
@@ -1500,14 +1608,18 @@ class TCPServer:
 
                     self.print_log(log)
                     done = True
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
                 else:
                     log = f'closing connection to {clientAddr}: could not locate package'
 
                     server_log(userArray[userID], log)
 
                     self.print_log(log)
-                    clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
+                    clientSock.send(self.crypt_stub.encrypt_data(
+                        self.crypt_clients_list[threading.get_ident()][0],
+                        self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
                     clientSock.close()
                     del self.crypt_clients_list[threading.get_ident()]
         # list all packages request
@@ -1518,12 +1630,16 @@ class TCPServer:
                 error = f'closing connection to {clientAddr}: invalid auth_token'
                 write_log(error)
                 self.print_log(error)
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.FORBIDDEN))
+                clientSock.send(self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], cOP.FORBIDDEN))
                 clientSock.close()
                 del self.crypt_clients_list[threading.get_ident()]
             else:
                 # sending package list
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                clientSock.send(self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                 packageList = []
                 versionList = []
                 output = "Available packages:\r\n"
@@ -1551,7 +1667,9 @@ version: {versionList[x]}"""
 
                 self.print_log(log)
                 output = output
-                output = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], output)
+                output = self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], output)
                 time.sleep(self.time_delay)
                 clientSock.send(output)
         # checks if package is available
@@ -1562,14 +1680,20 @@ version: {versionList[x]}"""
                 error = f'closing connection to {clientAddr}: invalid auth_token'
                 server_log(userArray[userID], error)
                 self.print_log(error)
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.FORBIDDEN))
+                clientSock.send(self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], cOP.FORBIDDEN))
                 clientSock.close()
                 del self.crypt_clients_list[threading.get_ident()]
             else:
                 # sends package information if available
-                clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
+                clientSock.send(self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], cOP.OK))
                 data = clientSock.recv(1024)
-                data = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], data)
+                data = self.crypt_stub.decrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], data)
                 package = data
                 version = ''
                 packageAvailable = False
@@ -1584,7 +1708,9 @@ version: {versionList[x]}"""
                             info = f"""Package found!
 name: {package}
 version: {version}"""
-                            info = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], info)
+                            info = self.crypt_stub.encrypt_data(
+                                self.crypt_clients_list[threading.get_ident()][0],
+                                self.crypt_clients_list[threading.get_ident()][1], info)
                             clientSock.send(info)
                             clientSock.close()
                             del self.crypt_clients_list[threading.get_ident()]
@@ -1594,12 +1720,16 @@ version: {version}"""
                 pass
             else:
                 info = f"Package {package} not found."
-                info = self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], info)
+                info = self.crypt_stub.encrypt_data(
+                    self.crypt_clients_list[threading.get_ident()][0],
+                    self.crypt_clients_list[threading.get_ident()][1], info)
                 clientSock.send(info)
                 clientSock.close()
                 del self.crypt_clients_list[threading.get_ident()]
         else:
-            clientSock.send(self.crypt_stub.encrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
+            clientSock.send(self.crypt_stub.encrypt_data(
+                self.crypt_clients_list[threading.get_ident()][0],
+                self.crypt_clients_list[threading.get_ident()][1], cOP.RST))
             self.print_log(
                 f'closed connection to {clientAddr}: wrong operand: {data}')
             write_log(
@@ -1629,7 +1759,10 @@ version: {version}"""
                 self.shutdown_server()
                 log = colors.RED + "SECURITY ALERT! DDoS Attack detected!" + colors.WHITE
                 self.print_log(log)
-                log = f"---DDoS information---\r\nTotal connections: {ddos_con}\r\nDatetime: {current_date_time}\r\nIP-Address: {clientAddr}\r\nDelay: 10s"
+                log = f"""---DDoS information---\r\n
+                      Total connections: {ddos_con}\r\n
+                      Datetime: {current_date_time}\r\n
+                      IP-Address: {clientAddr}\r\nDelay: 10s"""
                 write_ddos_log(log)
                 self.send_email(
                     self.targetEmail,
@@ -1760,7 +1893,9 @@ version: {version}"""
             server_main_log(log)
             self.print_log(log)
             option = clientSock.recv(16)
-            option = self.crypt_stub.decrypt_data(self.crypt_clients_list[threading.get_ident()][0], self.crypt_clients_list[threading.get_ident()][1], option)
+            option = self.crypt_stub.decrypt_data(
+                self.crypt_clients_list[threading.get_ident()][0],
+                self.crypt_clients_list[threading.get_ident()][1], option)
             log = f'request received from {clientAddr}'
             server_main_log(log)
 
