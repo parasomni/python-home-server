@@ -3,27 +3,26 @@
 
 # import required modules
 import os
+import shutil
 import socket
 import sys
-import shutil
 import threading
 import time
-
 from datetime import datetime
 from getpass import getpass
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
+
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, padding, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 client_version = 'v1.1.8'
 
 
-# class for coloured output
 class colors:
+    """class for coloured output
+    """
     GREEN = '\033[92m'
     RED = '\033[91m'
     WHITE = '\033[97m'
@@ -31,9 +30,9 @@ class colors:
     BLUE = '\033[94m'
 
 
-
-# necessary oparands for communication between client and server
 class cOP:
+    """necessary oparands for communication between client and server
+    """
     FILE = "334"
     DIR = "336"
     TRANSFER = "340"
@@ -58,9 +57,9 @@ class cOP:
     LOCK = "503"
 
 
-
-# debug class
 class Debug:
+    """debug class
+    """
     def __init__(self, enabled=True):
         self.enabled = enabled
 
@@ -69,9 +68,9 @@ class Debug:
             print(f"[DEBUG]: {message}")
 
 
-
-# encryption stub
 class EncryptionStub:
+    """encryption stub
+    """
     def __init__(self, debugger):
         self.key = ""
         self.iv = 0
@@ -91,32 +90,32 @@ class EncryptionStub:
     def encrypt_data(self, plaintext, text=True):
         if text:
             plaintext = plaintext.encode('utf-8')
-        #self.debugger.debug(f"Plaintext before encryption: {plaintext}")
+        # self.debugger.debug(f"Plaintext before encryption: {plaintext}")
         cipher = Cipher(
             algorithms.AES(
                 self.key), modes.CBC(
                 self.iv), backend=default_backend())
         padder = padding.PKCS7(algorithms.AES.block_size).padder()
         padded_plaintext = padder.update(plaintext) + padder.finalize()
-        #self.debugger.debug(f"Padded plaintext: {padded_plaintext}")
+        # self.debugger.debug(f"Padded plaintext: {padded_plaintext}")
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
-        #self.debugger.debug(f"Ciphertext: {ciphertext}")
+        # self.debugger.debug(f"Ciphertext: {ciphertext}")
         return ciphertext
 
     def decrypt_data(self, ciphertext, text=True):
-        #self.debugger.debug(f"Ciphertext before decryption: {ciphertext}")
+        # self.debugger.debug(f"Ciphertext before decryption: {ciphertext}")
         cipher = Cipher(
             algorithms.AES(
                 self.key), modes.CBC(
                 self.iv), backend=default_backend())
         decryptor = cipher.decryptor()
         padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-        #self.debugger.debug(
+        # self.debugger.debug(
         #    f"Padded plaintext after decryption: {padded_plaintext}")
         unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
         plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-        #self.debugger.debug(f"Plaintext after unpadding: {plaintext}")
+        # self.debugger.debug(f"Plaintext after unpadding: {plaintext}")
         if text:
             return plaintext.decode('utf-8')
         return plaintext
@@ -149,10 +148,9 @@ class EncryptionStub:
         self.iv = derived_key[32:48]
 
 
-# client implementation
-
 class TCPClient:
-
+    """client implementation
+    """
     # initializes TCPClient
     def __init__(self, host, port, debugger):
         # defines address and port
@@ -264,7 +262,8 @@ class TCPClient:
     # checks if some content is missing
     def end_check(self, dirSizeBefore, backupSize, destDir):
         currSize = self.get_size(destDir)
-        self.debugger.debug("end_check: dir_size[%s], backup_size[%s], dest_dir_size[%s]"%(dirSizeBefore, backupSize, currSize))
+        self.debugger.debug("end_check: dir_size[%s], backup_size[%s], dest_dir_size[%s]"
+                            % (dirSizeBefore, backupSize, currSize))
         if currSize == dirSizeBefore:
             actSize = backupSize
         else:
@@ -417,7 +416,7 @@ class TCPClient:
                         # packages
                         self.debugger.debug("receiving bytes.")
                         while True:
-                            if skip == True:
+                            if skip is True:
                                 fileBytes = self.clientSock.recv(filesize)
                             else:
                                 fileBytes = self.clientSock.recv(1024)
@@ -506,11 +505,13 @@ class TCPClient:
                                 transferVar = False
 
                             # transfer is still going on
-                            self.debugger.debug("[%s] Received transfer status %s"%(threading.get_ident(), answ))
+                            self.debugger.debug("[%s] Received transfer status %s"
+                                                % (threading.get_ident(), answ))
                             if answ == cOP.TRANSFER or answ == cOP.FILE:
                                 # receieving directory name
                                 if answ == cOP.TRANSFER:
-                                    self.debugger.debug("[%s] Receiving pathName"%(threading.get_ident()))
+                                    self.debugger.debug("[%s] Receiving pathName"
+                                                        % (threading.get_ident()))
                                     pathName = self.clientSock.recv(1024)
                                     pathName = self.crypt_stub.decrypt_data(pathName)
                                     fileStatus = self.clientSock.recv(1024)
@@ -525,7 +526,8 @@ class TCPClient:
                                     # receieving file name
                                     fileName = self.clientSock.recv(1024)
                                     fileName = self.crypt_stub.decrypt_data(fileName)
-                                    self.debugger.debug("[%s] Received file name %s"%(threading.get_ident(), fileName))
+                                    self.debugger.debug("[%s] Received file name %s"
+                                                        % (threading.get_ident(), fileName))
                                     destDir = self.download + pathName
                                     check_dir(destDir)
                                     dirSizeBefore = self.get_size(destDir)
@@ -546,7 +548,7 @@ class TCPClient:
                                     # if filesize higher than 1024, algorithm
                                     # fetches all packages
                                     while True:
-                                        if skip == True:
+                                        if skip is True:
                                             fileBytes = self.clientSock.recv(
                                                 filesize)
                                         else:
@@ -554,7 +556,8 @@ class TCPClient:
                                                 1024)
                                         fileData += fileBytes
                                         self.print_load_status(
-                                            len(fileData), filesize, destDir, dirSizeBefore, backupSize)
+                                            len(fileData), filesize, destDir,
+                                            dirSizeBefore, backupSize)
                                         if int(filesize) == int(len(fileData)):
                                             break
                                         else:
@@ -835,10 +838,8 @@ class TCPClient:
 
         # requesting file upload
         current_date_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.print_log(
-            f'''requesting file transfer from [{
-            self.serverAddr}]::[{
-            self.serverPort}]''')
+        self.print_log(f'''requesting file transfer from
+                       [{self.serverAddr}]::[{self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.UPLOAD))
         time.sleep(self.time_buffer)
 
@@ -851,20 +852,20 @@ class TCPClient:
         answ = self.clientSock.recv(16)
         answ = self.crypt_stub.decrypt_data(answ)
 
-            # trying to acquire write access to the client data
+        # trying to acquire write access to the client data
         if answ == cOP.LOCK:
-                self.print_log(
-                    f'WARNING: acquiring lock failed. Client resources already in use. Please wait.')
-                answ = self.clientSock.recv(16)
-                answ = self.crypt_stub.decrypt_data(answ)
-                if answ == cOP.OK:
-                    answ = True
-        elif answ == cOP.OK:
+            self.print_log(
+                f'WARNING: acquiring lock failed. Client resources already in use. Please wait.')
+            answ = self.clientSock.recv(16)
+            answ = self.crypt_stub.decrypt_data(answ)
+            if answ == cOP.OK:
                 answ = True
+        elif answ == cOP.OK:
+            answ = True
         else:
-                self.print_log("ERROR: backup failed: ", answ)
-                self.clientSock.close()
-                sys.exit()
+            self.print_log("ERROR: backup failed: ", answ)
+            self.clientSock.close()
+            sys.exit()
 
             # analysing answer
         self.debugger.debug(f"Received answer : {answ}")
@@ -1023,10 +1024,8 @@ class TCPClient:
         def send_backup():
             # requesting file transfer
             sentBytes = 0
-            self.print_log(
-                f'''requesting file transfer from [{
-                self.serverAddr}]::[{
-                self.serverPort}]''')
+            self.print_log(f'''requesting file transfer from
+                           [{self.serverAddr}]::[{self.serverPort}]''')
             self.clientSock.send(self.crypt_stub.encrypt_data(cOP.BACKUP))
             time.sleep(self.time_buffer)
 
@@ -1255,10 +1254,8 @@ class TCPClient:
                 pass
 
         # request package from server
-        self.print_log(
-            f'''installing package from [{
-            self.serverAddr}]::[{
-            self.serverPort}]''')
+        self.print_log(f'''installing package from
+                       [{self.serverAddr}]::[{self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.PACKAGE))
         time.sleep(self.time_buffer)
 
@@ -1311,7 +1308,7 @@ class TCPClient:
                     self.debugger.debug("receiving status from server")
                     if not transferVar:
                         answ = self.clientSock.recv(16)
-                        self.debugger.debug("received status: %s"%(answ))
+                        self.debugger.debug("received status: %s" % (answ))
                         answ = self.crypt_stub.decrypt_data(answ)
 
                     # set transfer to ongoing
@@ -1321,7 +1318,7 @@ class TCPClient:
                         transferVar = False
 
                     # transfer ongoing
-                    self.debugger.debug("answer received: %s"%(answ))
+                    self.debugger.debug("answer received: %s" % (answ))
                     if answ == cOP.TRANSFER or answ == cOP.FILE:
 
                         # receiving path name for package
@@ -1428,10 +1425,8 @@ class TCPClient:
     def listall(self, userToken):
         self.crypt_stub.setup_encryption(self.clientSock)
         # request to list available packages
-        self.print_log(
-            f'''listing available packages from [{
-            self.serverAddr}]::[{
-            self.serverPort}]''')
+        self.print_log(f'''listing available packages from
+                       [{self.serverAddr}]::[{self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.LISTALL))
         time.sleep(self.time_buffer)
 
@@ -1491,10 +1486,8 @@ class TCPClient:
     def search(self, userToken, package):
         self.crypt_stub.setup_encryption(self.clientSock)
         # request package search
-        self.print_log(
-            f'''searching available package from [{
-            self.serverAddr}]::[{
-            self.serverPort}]''')
+        self.print_log(f'''searching available package from
+                       [{self.serverAddr}]::[{self.serverPort}]''')
         self.clientSock.send(self.crypt_stub.encrypt_data(cOP.SEARCH))
         time.sleep(self.time_buffer)
 
@@ -1540,8 +1533,9 @@ class TCPClient:
             sys.exit()
 
 
-# help menu
 def help_menu():
+    """help menu
+    """
     print(f"""ultron client
 version {client_version}
     uc server instructions:
@@ -1602,13 +1596,13 @@ opList = [
 ]
 
 
-# main function
 def client_start():
+    """main function
+    """
     # config variables
     tokenfile = '/etc/ultron-server/token.txt'
     token = recieve_token(tokenfile)
     configfile = '/etc/ultron-server/config.csv'
-    #configfile = '/etc/ultron-server/debug.csv'
 
     # extract/create server configuration
     serverport = 0
